@@ -21,6 +21,14 @@ function addToHistory(html) {
   div.style.marginBottom = '20px';
   div.classList.add('fade-in');
   history.appendChild(div);
+  
+  // Add separator line after command output
+  const separator = document.createElement('div');
+  separator.style.borderBottom = '1px solid #292e42';
+  separator.style.margin = '15px 0';
+  separator.style.opacity = '0.5';
+  history.appendChild(separator);
+  
   scrollToBottom();
 }
 
@@ -120,11 +128,9 @@ async function runIntro() {
 
   const bootLines = [
     "Initializing kernel core...",
-    "Loading network drivers (eth0)...",
-    "Starting container runtime (Docker)...",
-    "Connecting to Kubernetes cluster...",
-    "Mounting persistent volumes...",
-    "Verifying Terraform state locks..."
+    "Loading network drivers...",
+    "Starting container runtime...",
+    "Connecting to cluster..."
   ];
 
   for (const lineText of bootLines) {
@@ -161,16 +167,16 @@ async function runIntro() {
   motdDiv.className = 'motd-container fade-in';
   motdDiv.innerHTML = `
     <div style="margin-top:15px;">
-      Welcome to <strong>DevOps-Portfolio-OS</strong> (GNU/Linux 5.15.0-generic x86_64)<br>
-      System information as of <span style="color:#7dcfff;">${now}</span>
+      Welcome to <strong>DevOps-Portfolio-OS</strong><br>
+      <span style="color:#565f89;font-size:12px;">${now}</span>
     </div>
-    <div class="motd-grid">
-      <div><span class="motd-key">System load:</span> <span class="motd-val">${(Math.random()*0.15+0.01).toFixed(2)}, ${(Math.random()*0.08+0.01).toFixed(2)}, ${(Math.random()*0.05).toFixed(2)}</span></div>
-      <div><span class="motd-key">Memory usage:</span> <span class="motd-val">${Math.floor(Math.random()*8+4)}% of 32GB</span></div>
-      <div><span class="motd-key">Processes:</span> <span class="motd-val">${Math.floor(Math.random()*40+110)}</span></div>
-      <div><span class="motd-key">IPv4 address:</span> <span class="motd-val">10.0.${Math.floor(Math.random()*3)}.${Math.floor(Math.random()*254+1)}</span></div>
+    <div style="margin:8px 0;display:flex;flex-wrap:wrap;gap:12px;font-size:13px;">
+      <span><span class="motd-key">Load:</span> <span class="motd-val">${(Math.random()*0.15+0.01).toFixed(2)}</span></span>
+      <span><span class="motd-key">Memory:</span> <span class="motd-val">${Math.floor(Math.random()*8+4)}%</span></span>
+      <span><span class="motd-key">Processes:</span> <span class="motd-val">${Math.floor(Math.random()*40+110)}</span></span>
+      <span><span class="motd-key">IP:</span> <span class="motd-val">10.0.${Math.floor(Math.random()*3)}.${Math.floor(Math.random()*254+1)}</span></span>
     </div>
-    <span style="color:#565f89;">Last login: ${now} from <span style="color:#f7768e;">${ip}</span></span>
+    <span style="color:#565f89;font-size:12px;">Last login from <span style="color:#7dcfff;">${ip}</span></span>
     <hr style="border:0;border-bottom:1px solid #292e42;margin:10px 0 20px;">
   `;
   history.appendChild(motdDiv);
@@ -532,7 +538,7 @@ function processCommand(cmd) {
       addToHistory(`<div style="color:#a9b1d6;">
         <span style="color:#e0af68;font-weight:bold;font-size:15px;">📄 README.md</span>
         <hr style="border:0;border-bottom:1px solid #414868;margin:8px 0;">
-        <span style="color:#7dcfff;font-weight:bold;">Rishant Shukla</span> — DevOps Engineer @ Vavensoft Pvt. Ltd.<br><br>
+        <span style="color:#7dcfff;font-weight:bold;">Rishant Shukla</span> — DevOps Engineer @ ResourceDekho IT Services<br><br>
         DevOps Engineer with proven experience in building CI/CD pipelines, automating infrastructure,<br>
         and deploying applications on cloud and containerized platforms.<br><br>
         Skilled in Linux, Kubernetes, Docker, and AWS to deliver secure, scalable, and reliable solutions.<br><br>
