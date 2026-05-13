@@ -97,18 +97,44 @@ body.matrix-mode #nav-links a:hover { color: #00ff41 !important; background: rgb
   flex-direction: column;
   width: min(1100px, 96vw);
   height: min(700px, 92vh);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 2px solid transparent;
   border-radius: 10px;
   overflow: hidden;
   background: var(--bg);
+  background-clip: padding-box;
   box-shadow:
     0 0 0 1px rgba(255,255,255,0.04),
     0 24px 80px rgba(0,0,0,0.9);
   transition: border-color 0.3s, box-shadow 0.3s;
 }
 
-/* Scanline texture overlay */
+/* Animated gradient border */
 #terminal-window::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  border-radius: 10px;
+  background: linear-gradient(
+    45deg,
+    #89ddff,
+    #3dd5f3,
+    #82aaff,
+    #c792ea,
+    #89ddff
+  );
+  background-size: 300% 300%;
+  animation: gradientBorder 8s ease infinite;
+  opacity: 0.85;
+}
+
+@keyframes gradientBorder {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Scanline texture overlay */
+#terminal-window::after {
   content: '';
   position: absolute;
   inset: 0;
