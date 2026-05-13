@@ -70,21 +70,35 @@ async function getVisitorIP() {
 
 // ─── DEPLOY PIPELINE ──────────────────────────────────────────────────────────
 async function runDeployPipeline() {
+  const repos = ['rishant/portfolio', 'devops/webapp', 'prod/frontend', 'main/application'];
+  const testCounts = [312, 487, 256, 391, 523];
+  const images = ['rishant/portfolio:latest', 'app:v2.1.0', 'webapp:prod', 'frontend:stable'];
+  const registries = ['ECR', 'Docker Hub', 'GCR', 'ACR'];
+  const environments = ['Production', 'Staging', 'Live', 'Prod-US-East'];
+  const times = ['4.2s', '3.8s', '5.1s', '4.7s', '3.5s'];
+  
+  const repo = repos[Math.floor(Math.random() * repos.length)];
+  const tests = testCounts[Math.floor(Math.random() * testCounts.length)];
+  const image = images[Math.floor(Math.random() * images.length)];
+  const registry = registries[Math.floor(Math.random() * registries.length)];
+  const env = environments[Math.floor(Math.random() * environments.length)];
+  const time = times[Math.floor(Math.random() * times.length)];
+  
   const steps = [
     "[INFO] Initiating CI/CD pipeline...",
-    "[INFO] Cloning repository...",
+    `[INFO] Cloning repository ${repo}...`,
     "[OK]   Repository cloned successfully.",
     "[INFO] Running unit tests...",
-    "[OK]   312 tests passed. 0 failed.",
-    "[INFO] Building Docker image 'rishant/portfolio:latest'...",
+    `[OK]   ${tests} tests passed. 0 failed.`,
+    `[INFO] Building Docker image '${image}'...`,
     "[OK]   Image built successfully.",
     "[INFO] Pushing image to registry...",
-    "[OK]   Image pushed to ECR.",
+    `[OK]   Image pushed to ${registry}.`,
     "[INFO] Applying Terraform state...",
     "[OK]   Infrastructure is up to date.",
-    "[INFO] Deploying to Kubernetes (Production)...",
+    `[INFO] Deploying to Kubernetes (${env})...`,
     "[OK]   Rollout complete. 0 downtime.",
-    "<br><span style='color:#9ece6a'>🚀 Pipeline completed in 4.2s.</span>"
+    `<br><span style='color:#9ece6a'>🚀 Pipeline completed in ${time}.</span>`
   ];
   for (const step of steps) {
     const div = document.createElement('div');
@@ -95,7 +109,7 @@ async function runDeployPipeline() {
     div.innerHTML = step;
     history.appendChild(div);
     scrollToBottom();
-    await new Promise(r => setTimeout(r, 550));
+    await new Promise(r => setTimeout(r, 1000));
   }
 }
 
@@ -187,7 +201,8 @@ document.getElementById('terminal-window').addEventListener('click', e => {
 const availableCommands = [
   'help','about','neofetch','whoami','experience','git log','projects','skills',
   'tree','certs','education','contact','email','status','deploy','ls','resume',
-  'clear','m','sudo','uptime','ping','history','date','pwd','hostname','echo','cat readme','cat_readme'
+  'clear','m','uptime','ping','history','date','pwd','hostname','echo','cat readme','cat_readme',
+  'linkedin','github','joke','quote','fortune','hack','coffee'
 ];
 const commandHistory = [];
 let historyIndex = -1;
@@ -292,9 +307,200 @@ function processCommand(cmd) {
       window.open('./resume.pdf', '_blank');
       break;
     case 'm': toggleMatrix(); break;
-    case 'sudo':
-      addToHistory(`<div style="color:#f7768e;">Permission denied: User 'rishant' is not in the sudoers file. This incident will be reported.</div>`);
+    case 'linkedin':
+      addToHistory(`<div style="color:#a9b1d6;">Opening LinkedIn profile... <a href="https://www.linkedin.com/in/rishantshukla/" target="_blank" style="color:#7dcfff">[linkedin.com/in/rishantshukla]</a></div>`);
+      window.open('https://www.linkedin.com/in/rishantshukla/', '_blank');
       break;
+    case 'github':
+      addToHistory(`<div style="color:#a9b1d6;">Opening GitHub profile... <a href="https://github.com/rishantshukla" target="_blank" style="color:#7dcfff">[github.com/rishantshukla]</a></div>`);
+      window.open('https://github.com/rishantshukla', '_blank');
+      break;
+    case 'joke': {
+      const jokes = [
+        "Why do programmers prefer dark mode? Because light attracts bugs! 🐛",
+        "How many DevOps engineers does it take to change a light bulb? None, that's a hardware problem. 💡",
+        "There are 10 types of people: those who understand binary and those who don't. 😄",
+        "Why did the developer go broke? Because he used up all his cache! 💸",
+        "I would tell you a UDP joke, but you might not get it. 📡",
+        "A SQL query walks into a bar, walks up to two tables and asks: 'Can I JOIN you?' 🍺",
+        "Why do Java developers wear glasses? Because they can't C#! 👓",
+        "Docker containers are like apartments: everyone has their own space but shares the building. 🏢",
+        "Kubernetes is Greek for 'Why is my pod crashing?' ☸️",
+        "There's no place like 127.0.0.1 🏠",
+        "Why do programmers always mix up Halloween and Christmas? Because Oct 31 == Dec 25! 🎃🎄",
+        "A programmer's wife tells him: 'Go to the store and buy a loaf of bread. If they have eggs, buy a dozen.' He returns with 12 loaves of bread. 🍞",
+        "How do you comfort a JavaScript bug? You console it! 🐞",
+        "Why did the DevOps engineer quit? Too many issues to resolve! 🎫",
+        "What's a programmer's favorite hangout place? Foo Bar! 🍻",
+        "Why do programmers hate nature? It has too many bugs! 🦟",
+        "Git commit -m 'Fixed bug' (Narrator: The bug was not fixed) 🐛",
+        "Why was the JavaScript developer sad? Because he didn't Node how to Express himself! 😢",
+        "What do you call a programmer from Finland? Nerdic! 🇫🇮",
+        "Why do Python programmers prefer snakes? Because they're good at debugging! 🐍"
+      ];
+      const joke = jokes[Math.floor(Math.random() * jokes.length)];
+      addToHistory(`<div style="color:#e0af68;">${joke}</div>`);
+      break;
+    }
+    case 'quote': {
+      const quotes = [
+        '"Any fool can write code that a computer can understand. Good programmers write code that humans can understand." — Martin Fowler',
+        '"First, solve the problem. Then, write the code." — John Johnson',
+        '"Code is like humor. When you have to explain it, it\'s bad." — Cory House',
+        '"Make it work, make it right, make it fast." — Kent Beck',
+        '"The best error message is the one that never shows up." — Thomas Fuchs',
+        '"Simplicity is the soul of efficiency." — Austin Freeman',
+        '"Infrastructure as Code: Because clicking buttons is so 2010." — DevOps Wisdom',
+        '"Automate everything you can, so you can focus on what you can\'t." — Unknown',
+        '"In DevOps, we trust automation, not luck." — DevOps Proverb',
+        '"The only way to go fast is to go well." — Robert C. Martin',
+        '"Talk is cheap. Show me the code." — Linus Torvalds',
+        '"Programs must be written for people to read, and only incidentally for machines to execute." — Harold Abelson',
+        '"Truth can only be found in one place: the code." — Robert C. Martin',
+        '"Perfection is achieved not when there is nothing more to add, but when there is nothing left to take away." — Antoine de Saint-Exupéry',
+        '"Before software can be reusable it first has to be usable." — Ralph Johnson',
+        '"Measuring programming progress by lines of code is like measuring aircraft building progress by weight." — Bill Gates',
+        '"Walking on water and developing software from a specification are easy if both are frozen." — Edward V. Berard',
+        '"It\'s not a bug – it\'s an undocumented feature." — Anonymous',
+        '"The best thing about a boolean is even if you are wrong, you are only off by a bit." — Anonymous',
+        '"Without requirements or design, programming is the art of adding bugs to an empty text file." — Louis Srygley'
+      ];
+      const quote = quotes[Math.floor(Math.random() * quotes.length)];
+      addToHistory(`<div style="color:#7dcfff;font-style:italic;">${quote}</div>`);
+      break;
+    }
+    case 'hack': {
+      const targets = ['192.168.1', '10.0.0', '172.16.0', '203.0.113'];
+      const passwords = [
+        ['admin', 'password123', 'qwerty'],
+        ['root', '123456', 'letmein'],
+        ['admin123', 'welcome', 'monkey'],
+        ['password', 'abc123', 'iloveyou'],
+        ['admin', 'password1', '12345678']
+      ];
+      const vulnerabilities = ['CVE-2024', 'CVE-2023', 'CVE-2025'];
+      const databases = ['user_data', 'credentials', 'financial_records', 'customer_info', 'secret_files'];
+      const endings = [
+        'Just kidding! This is a portfolio, not Mr. Robot 😄🎭',
+        'Gotcha! No actual hacking here, just DevOps magic ✨',
+        'Psych! This is just a fun terminal simulation 🎪',
+        'Surprise! You\'ve been bamboozled 🤡',
+        'Plot twist: This is just JavaScript 😂'
+      ];
+      
+      const targetNet = targets[Math.floor(Math.random() * targets.length)];
+      const targetIP = Math.floor(Math.random()*254+1);
+      const pwdSet = passwords[Math.floor(Math.random() * passwords.length)];
+      const cve = vulnerabilities[Math.floor(Math.random() * vulnerabilities.length)];
+      const cveNum = Math.floor(Math.random()*9999);
+      const db = databases[Math.floor(Math.random() * databases.length)];
+      const ending = endings[Math.floor(Math.random() * endings.length)];
+      
+      addToHistory(`<div style="color:#9ece6a;">Initializing hacking sequence...</div>`);
+      setTimeout(() => {
+        addToHistory(`<div style="color:#7dcfff;">Scanning network... [${targetNet}.0/24]</div>`);
+      }, 1000);
+      setTimeout(() => {
+        addToHistory(`<div style="color:#7dcfff;">Found target: ${targetNet}.${targetIP}</div>`);
+      }, 2000);
+      setTimeout(() => {
+        addToHistory(`<div style="color:#e0af68;">Attempting SSH brute force...</div>`);
+      }, 3000);
+      setTimeout(() => {
+        addToHistory(`<div style="color:#565f89;">Trying password: ********... ❌</div>`);
+      }, 4000);
+      setTimeout(() => {
+        addToHistory(`<div style="color:#565f89;">Trying password: ***********... ❌</div>`);
+      }, 5000);
+      setTimeout(() => {
+        addToHistory(`<div style="color:#565f89;">Trying password: ******... ❌</div>`);
+      }, 6000);
+      setTimeout(() => {
+        addToHistory(`<div style="color:#9ece6a;">Exploiting vulnerability ${cve}-${cveNum}...</div>`);
+      }, 7000);
+      setTimeout(() => {
+        addToHistory(`<div style="color:#9ece6a;">Bypassing firewall... [████████████████████] 100%</div>`);
+      }, 8000);
+      setTimeout(() => {
+        addToHistory(`<div style="color:#9ece6a;">Escalating privileges... root access obtained! ✓</div>`);
+      }, 9000);
+      setTimeout(() => {
+        addToHistory(`<div style="color:#9ece6a;">Downloading ${db}... [████████████████████] 100%</div>`);
+      }, 10000);
+      setTimeout(() => {
+        addToHistory(`<div style="color:#bb9af7;font-weight:bold;">ACCESS GRANTED - SYSTEM COMPROMISED</div>`);
+      }, 11000);
+      setTimeout(() => {
+        addToHistory(`<div style="color:#f7768e;font-size:16px;margin-top:10px;">${ending}</div>`);
+        scrollToBottom();
+      }, 18000);
+      break;
+    }
+    case 'fortune': {
+      const fortunes = [
+        "You will write bug-free code today... said no developer ever. 🐛",
+        "A merge conflict approaches. Prepare yourself. ⚔️",
+        "Your next deployment will go smoothly. (Check your tests first!) ✅",
+        "The cloud is just someone else's computer. ☁️",
+        "In the future, you will understand your own code. Maybe. 🤔",
+        "Your Docker container will start on the first try. (Unlikely) 🐳",
+        "A great opportunity awaits... after you fix this bug. 🔧",
+        "Your CI/CD pipeline will be green today. Probably. 🟢",
+        "You will find the missing semicolon before lunch. 🍕",
+        "The production server is stable. For now. 🤞",
+        "Your code review will have zero comments. (Dream on!) 💭",
+        "Kubernetes will make sense to you... eventually. ☸️",
+        "Your infrastructure as code will work as intended. Fingers crossed! 🤞",
+        "The logs will reveal the answer you seek. grep wisely. 🔍",
+        "Your backup strategy will save you one day. Test it! 💾",
+        "A wild segmentation fault appears! Better save your work. 💥",
+        "Today's commits will be meaningful and well-documented. (Sure they will) 📝",
+        "Your regex will work on the first try. (In an alternate universe) 🌌",
+        "The database migration will complete without errors. (Narrator: It won't) 🗄️",
+        "Your estimates will be accurate this sprint. (Haha, good one!) 📊",
+        "Stack Overflow has the answer you seek. It always does. 📚",
+        "Your code will compile on the first attempt. (Keep dreaming) ⚙️",
+        "A production incident looms on the horizon. Check your monitoring! 🚨",
+        "Your technical debt will be paid off... someday. 💳",
+        "The legacy code you're about to touch was written by someone who no longer works here. Good luck! 👻"
+      ];
+      const fortune = fortunes[Math.floor(Math.random() * fortunes.length)];
+      addToHistory(`<div style="color:#bb9af7;">
+        <div style="border:1px solid #565f89;padding:12px;border-radius:6px;margin:8px 0;">
+          ${fortune}
+        </div>
+      </div>`);
+      break;
+    }
+    case 'coffee': {
+      const coffeeTypes = ['Espresso', 'Cappuccino', 'Latte', 'Americano', 'Mocha', 'Cold Brew'];
+      const caffeineLevel = ['Maximum', 'Extreme', 'Dangerous', 'Legendary', 'Over 9000!', 'Infinite'];
+      const messages = [
+        'Brewing virtual coffee... Done!',
+        'Preparing your caffeine boost... Ready!',
+        'Extracting maximum caffeine... Complete!',
+        'Compiling coffee beans... Success!',
+        'Deploying hot beverage... Served!',
+        'Running coffee.sh... Executed!'
+      ];
+      
+      const coffee = coffeeTypes[Math.floor(Math.random() * coffeeTypes.length)];
+      const level = caffeineLevel[Math.floor(Math.random() * caffeineLevel.length)];
+      const msg = messages[Math.floor(Math.random() * messages.length)];
+      
+      addToHistory(`<div style="color:#e0af68;">
+        <pre style="color:#e0af68;line-height:1.2;margin:10px 0;">
+    ( (
+     ) )
+  ........
+  |      |]
+  \\      /
+   \`----'
+        </pre>
+        <div style="color:#a9b1d6;">☕ ${msg} <span style="color:#565f89;">(${coffee} - Caffeine level: ${level})</span></div>
+      </div>`);
+      break;
+    }
     case 'uptime': {
       const elapsed = Math.floor((Date.now() - sessionStart) / 1000);
       const hrs  = Math.floor(elapsed / 3600);
@@ -311,7 +517,7 @@ function processCommand(cmd) {
       addToHistory(`<div style="color:#a9b1d6;">/home/rishant/portfolio</div>`);
       break;
     case 'hostname':
-      addToHistory(`<div style="color:#a9b1d6;">devops.rishantshukla.in</div>`);
+      addToHistory(`<div style="color:#a9b1d6;">rishant.vercel.app</div>`);
       break;
     case 'history': {
       const lines = commandHistory.map((c, i) =>
