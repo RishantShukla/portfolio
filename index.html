@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rishant Shukla | DevOps Engineer</title>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+</head>
+<body>
+
+  <!-- Particles Background -->
+  <div id="particles-js"></div>
+
+  <!-- Matrix Canvas -->
+  <canvas id="matrix-canvas"></canvas>
+
+  <!-- Custom Cursor -->
+  <div id="cursor-dot"></div>
+  <div id="cursor-outline"></div>
+
+  <!-- Full-screen terminal wrapper -->
+  <div id="terminal-window">
+
+    <!-- Title Bar (macOS-style chrome) -->
+    <div id="title-bar">
+      <div id="title-bar-left">
+        <span class="tb-dot tb-red"></span>
+        <span class="tb-dot tb-yellow"></span>
+        <span class="tb-dot tb-green"></span>
+      </div>
+      <div id="title-bar-center">rishant@devops: ~ (ssh)</div>
+      <div id="title-bar-right">
+        <span id="clock">00:00</span>
+      </div>
+    </div>
+
+    <!-- Nav Tab Bar -->
+    <nav id="nav-links">
+      <a onclick="runCommandClick('whoami')">👤 About</a>
+      <a onclick="runCommandClick('experience')">💼 Experience</a>
+      <a onclick="runCommandClick('skills')">🛠 Skills</a>
+      <a onclick="runCommandClick('projects')">📦 Projects</a>
+      <a onclick="runCommandClick('certs')">🏅 Certs</a>
+      <a onclick="runCommandClick('education')">🎓 Education</a>
+      <a onclick="runCommandClick('resume')">📄 Resume</a>
+      <a onclick="runCommandClick('contact')">✉️ Contact</a>
+    </nav>
+
+    <!-- Terminal Body -->
+    <div id="terminal">
+      <div id="history"></div>
+      <div id="real-prompt" class="prompt-line hidden">
+        <span class="user">rishant</span><span class="at">@</span><span class="host">devops</span><span class="arrow">➜</span>&nbsp;
+        <span id="input-display"></span><span class="typing-cursor"></span>
+        <input id="command-input" type="text" autocomplete="off" spellcheck="false" />
+      </div>
+    </div>
+
+  </div><!-- #terminal-window -->
+
+  <!-- Hidden Templates -->
+  <div style="display:none">
+
+    <!-- HELP -->
+    <div id="tpl-help">
+      <div class="help-header">[ Available Commands ]</div>
+      <div class="help-hint">// Type a command and press Enter, or simply <span style="color:#7dcfff;text-decoration:underline;">click on any highlighted command</span> to execute it.</div>
+
+      <div class="help-section-label">— Portfolio —</div>
+      <table class="help-table">
+        <tr><td class="ht-cmd clickable-cmd" data-cmd="about">about</td><td class="ht-dash">-</td><td class="ht-desc">About Me / System Info</td></tr>
+        <tr><td class="ht-cmd clickable-cmd" data-cmd="experience">experience</td><td class="ht-dash">-</td><td class="ht-desc">Work History (git log)</td></tr>
+        <tr><td class="ht-cmd clickable-cmd" data-cmd="projects">projects</td><td class="ht-dash">-</td><td class="ht-desc">Projects &amp; Contributions</td></tr>
+        <tr><td class="ht-cmd clickable-cmd" data-cmd="skills">skills</td><td class="ht-dash">-</td><td class="ht-desc">Tech Stack</td></tr>
+        <tr><td class="ht-cmd clickable-cmd" data-cmd="certs">certs</td><td class="ht-dash">-</td><td class="ht-desc">Certifications</td></tr>
+        <tr><td class="ht-cmd clickable-cmd" data-cmd="education">education</td><td class="ht-dash">-</td><td class="ht-desc">Degrees &amp; Education</td></tr>
+        <tr><td class="ht-cmd clickable-cmd" data-cmd="status">status</td><td class="ht-dash">-</td><td class="ht-desc">Cluster &amp; System Health</td></tr>
+        <tr><td class="ht-cmd clickable-cmd" data-cmd="contact">contact</td><td class="ht-dash">-</td><td class="ht-desc">Email &amp; Phone</td></tr>
+        <tr><td class="ht-cmd clickable-cmd" data-cmd="resume">resume</td><td class="ht-dash">-</td><td class="ht-desc">Download PDF Resume</td></tr>
+        <tr><td class="ht-cmd clickable-cmd" data-cmd="deploy">deploy</td><td class="ht-dash">-</td><td class="ht-desc">Trigger CI/CD Pipeline</td></tr>
+      </table>
+
+      <div class="help-section-label">— Terminal —</div>
+      <table class="help-table">
+        <tr><td class="ht-cmd clickable-cmd" data-cmd="ls">ls</td><td class="ht-dash">-</td><td class="ht-desc">List Directory Contents</td></tr>
+        <tr><td class="ht-cmd clickable-cmd" data-cmd="cat readme">cat readme</td><td class="ht-dash">-</td><td class="ht-desc">Read the README</td></tr>
+        <tr><td class="ht-cmd clickable-cmd" data-cmd="uptime">uptime</td><td class="ht-dash">-</td><td class="ht-desc">Session Uptime</td></tr>
+        <tr><td class="ht-cmd clickable-cmd" data-cmd="history">history</td><td class="ht-dash">-</td><td class="ht-desc">Command History</td></tr>
+        <tr><td class="ht-cmd clickable-cmd" data-cmd="date">date</td><td class="ht-dash">-</td><td class="ht-desc">Current Date &amp; Time</td></tr>
+        <tr><td class="ht-cmd clickable-cmd" data-cmd="hostname">hostname</td><td class="ht-dash">-</td><td class="ht-desc">Show Hostname</td></tr>
+        <tr><td class="ht-cmd" style="color:#565f89;">ping &lt;host&gt;</td><td class="ht-dash">-</td><td class="ht-desc">Simulate Network Ping</td></tr>
+        <tr><td class="ht-cmd" style="color:#565f89;">echo &lt;text&gt;</td><td class="ht-dash">&nbsp;</td><td class="ht-desc">Print Text</td></tr>
+        <tr><td class="ht-cmd clickable-cmd" data-cmd="m">m</td><td class="ht-dash">&nbsp;</td><td class="ht-desc">Toggle Matrix Mode</td></tr>
+        <tr><td class="ht-cmd clickable-cmd" data-cmd="clear">clear</td><td class="ht-dash">-</td><td class="ht-desc">Clear Terminal</td></tr>
+      </table>
+
+      <div class="help-section-label">— Shortcuts —</div>
+      <table class="help-table">
+        <tr><td class="ht-shortcut">Tab</td><td class="ht-dash">-</td><td class="ht-desc">Autocomplete command</td></tr>
+        <tr><td class="ht-shortcut">↑ / ↓</td><td class="ht-dash">-</td><td class="ht-desc">Navigate command history</td></tr>
+        <tr><td class="ht-shortcut">Ctrl + L</td><td class="ht-dash">-</td><td class="ht-desc">Clear terminal</td></tr>
+        <tr><td class="ht-shortcut">Ctrl + C</td><td class="ht-dash">-</td><td class="ht-desc">Cancel current input</td></tr>
+      </table>
+    </div>
+
+    <!-- NEOFETCH / WHOAMI -->
+    <div id="tpl-neofetch">
+      <div class="neofetch-wrap">
+        <div class="neofetch-info">
+          <div class="nf-row"><span class="nf-key">User</span><span class="nf-sep">:</span><span class="nf-val">Rishant Shukla</span></div>
+          <div class="nf-row"><span class="nf-key">Role</span><span class="nf-sep">:</span><span class="nf-val">DevOps Engineer</span></div>
+          <div class="nf-row"><span class="nf-key">Phone</span><span class="nf-sep">:</span><span class="nf-val">+91 7018517052</span></div>
+          <div class="nf-row"><span class="nf-key">Focus</span><span class="nf-sep">:</span><span class="nf-val">CI/CD · Kubernetes · AWS · IaC</span></div>
+          <div class="nf-row"><span class="nf-key">Location</span><span class="nf-sep">:</span><span class="nf-val">Jaipur, India 🇮🇳</span></div>
+          <div class="nf-row"><span class="nf-key">Company</span><span class="nf-sep">:</span><span class="nf-val">ResourceDekho IT Services</span></div>
+          <div style="margin:12px 0 8px;color:#565f89;">// "Automating the world, one pipeline at a time."</div>
+          <div style="color:#565f89;font-size:12px;">
+            // See my work history: <span class="clickable-cmd" data-cmd="experience">experience</span>
+            &nbsp;· Tech stack: <span class="clickable-cmd" data-cmd="skills">skills</span>
+          </div>
+          <div style="margin-top:14px;display:flex;gap:14px;">
+            <a href="https://github.com/rishantshukla" target="_blank" class="nf-link"><i class="fab fa-github"></i> GitHub</a>
+            <a href="https://www.linkedin.com/in/rishantshukla/" target="_blank" class="nf-link"><i class="fab fa-linkedin"></i> LinkedIn</a>
+            <a href="mailto:rishantshukla2002@gmail.com" class="nf-link"><i class="fas fa-envelope"></i> Email</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GIT LOG / EXPERIENCE -->
+    <div id="tpl-git-log">
+      <div style="color:#565f89;margin-bottom:12px;">$ git log --all --oneline --graph --decorate</div>
+
+      <div class="git-entry">
+        <div class="git-header">
+          <span class="git-star">*</span>
+          <span class="git-hash">f3a9d12</span>
+          <span class="git-tag">(HEAD → main)</span>
+          <span class="git-msg">feat: DevOps Engineer @ Vavensoft Pvt. Ltd.</span>
+        </div>
+        <div class="git-body">
+          <div class="git-meta-row">
+            <span class="git-role">DevOps Engineer</span>
+            <span class="git-sep">·</span>
+            <span class="git-company">Vavensoft Pvt. Ltd., Mohali</span>
+            <span class="git-sep">·</span>
+            <span class="git-date">May 2024 – Ongoing</span>
+          </div>
+          <ul class="git-bullets">
+            <li>Designed CI/CD pipelines using GitHub Actions, Bitbucket Pipelines, GitLab, Jenkins &amp; AWS CodePipeline</li>
+            <li>Containerized apps with Docker; deployed &amp; scaled on Kubernetes (EKS) and ECS for high availability</li>
+            <li>Automated infra provisioning with Terraform and Ansible for reproducible, secure environments</li>
+            <li>Managed Ubuntu servers — web hosting, DB setup, CIS benchmark hardening</li>
+            <li>Implemented AWS services: ECR, S3, RDS, IAM, ACM, SNS, SES, CloudFront, Load Balancers</li>
+            <li>Monitored infra with Grafana, Prometheus, and AWS CloudWatch dashboards &amp; alerts</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- SKILLS / TREE -->
+    <div id="tpl-skills">
+      <div style="color:#565f89;margin-bottom:10px;">$ tree ~/skills --depth 2</div>
+      <div class="tree-root">
+        <div class="tree-line"><span class="tree-branch">~/skills</span></div>
+        <div class="tree-line"><span class="tree-pipe">├──</span> <span class="tree-cat">☁️  Cloud &amp; Networking</span></div>
+        <div class="tree-line tree-indent"><span class="tree-pipe">├──</span> <span class="tree-item">AWS</span> <span class="tree-item">Microsoft Azure</span> <span class="tree-item">TCP/IP</span> <span class="tree-item">DNS</span> <span class="tree-item">DHCP</span> <span class="tree-item">Subnetting</span></div>
+        <div class="tree-line"><span class="tree-pipe">├──</span> <span class="tree-cat">🐳  Containers &amp; Orchestration</span></div>
+        <div class="tree-line tree-indent"><span class="tree-pipe">├──</span> <span class="tree-item">Docker</span> <span class="tree-item">Kubernetes</span> <span class="tree-item">HELM</span> <span class="tree-item">EKS</span> <span class="tree-item">ECS</span> <span class="tree-item">AKS</span></div>
+        <div class="tree-line"><span class="tree-pipe">├──</span> <span class="tree-cat">🔄  CI/CD &amp; Automation</span></div>
+        <div class="tree-line tree-indent"><span class="tree-pipe">├──</span> <span class="tree-item">Jenkins</span> <span class="tree-item">GitHub Actions</span> <span class="tree-item">GitLab CI</span> <span class="tree-item">Bitbucket</span> <span class="tree-item">AWS CodePipeline</span> <span class="tree-item">Ansible</span> <span class="tree-item">Terraform</span></div>
+        <div class="tree-line"><span class="tree-pipe">├──</span> <span class="tree-cat">📊  Monitoring &amp; Observability</span></div>
+        <div class="tree-line tree-indent"><span class="tree-pipe">├──</span> <span class="tree-item">Prometheus</span> <span class="tree-item">Grafana</span> <span class="tree-item">AWS CloudWatch</span> <span class="tree-item">Power Automate</span></div>
+        <div class="tree-line"><span class="tree-pipe">├──</span> <span class="tree-cat">💻  Scripting &amp; Version Control</span></div>
+        <div class="tree-line tree-indent"><span class="tree-pipe">├──</span> <span class="tree-item">Python</span> <span class="tree-item">Bash</span> <span class="tree-item">PowerShell</span> <span class="tree-item">Git</span> <span class="tree-item">GitHub</span></div>
+        <div class="tree-line"><span class="tree-pipe">├──</span> <span class="tree-cat">�  Linux</span></div>
+        <div class="tree-line tree-indent"><span class="tree-pipe">├──</span> <span class="tree-item">CentOS</span> <span class="tree-item">Ubuntu</span> <span class="tree-item">RHEL</span> <span class="tree-item">User Mgmt</span> <span class="tree-item">Process Mgmt</span> <span class="tree-item">Disk Mgmt</span></div>
+        <div class="tree-line"><span class="tree-pipe">└──</span> <span class="tree-cat">🌐  Web &amp; Databases</span></div>
+        <div class="tree-line tree-indent"><span class="tree-pipe">└──</span> <span class="tree-item">HTML</span> <span class="tree-item">CSS</span> <span class="tree-item">Tailwind</span> <span class="tree-item">SQL</span> <span class="tree-item">NoSQL</span> <span class="tree-item">SDLC</span></div>
+        <div style="margin-top:8px;color:#565f89;font-size:12px;">6 directories, 38 files</div>
+      </div>
+    </div>
+
+    <!-- PROJECTS -->
+    <div id="tpl-projects">
+      <div style="color:#565f89;margin-bottom:12px;">$ ls -la ~/projects/</div>
+      <div class="projects-grid">
+
+        <div class="project-card">
+          <div class="proj-header">
+            <span class="proj-icon">☁️</span>
+            <span class="proj-title">AWS Multi-Account Org &amp; SSO</span>
+            <div class="proj-links">
+              <a href="#" target="_blank"><i class="fab fa-github"></i></a>
+            </div>
+          </div>
+          <div class="proj-desc">Set up AWS multi-account Organization (Dev/UAT/Prod) improving isolation &amp; cost visibility by 40%. Implemented SSO with Entra + IAM Identity Center, cutting manual access management by 80%.</div>
+          <div class="proj-tags">
+            <span class="ptag">AWS</span><span class="ptag">IAM</span><span class="ptag">SSO</span><span class="ptag">Terraform</span>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="proj-header">
+            <span class="proj-icon">🤖</span>
+            <span class="proj-title">ShopfloorGPT on AKS</span>
+            <div class="proj-links">
+              <a href="#" target="_blank"><i class="fab fa-github"></i></a>
+            </div>
+          </div>
+          <div class="proj-desc">Deployed ShopfloorGPT on AKS using Terraform, reducing setup time by 70%. Implemented GitLab CI/CD pipelines cutting manual release effort by 80%. Lowered compute costs by 30%.</div>
+          <div class="proj-tags">
+            <span class="ptag">Kubernetes</span><span class="ptag">Terraform</span><span class="ptag">GitLab CI</span><span class="ptag">AKS</span>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="proj-header">
+            <span class="proj-icon">🔄</span>
+            <span class="proj-title">Kubeadm → Kubespray Migration</span>
+            <div class="proj-links">
+              <a href="#" target="_blank"><i class="fab fa-github"></i></a>
+            </div>
+          </div>
+          <div class="proj-desc">Migrated kubeadm-based K8s cluster to Kubespray. Replaced manual shell scripts with Ansible automation, reducing config effort by 70%. Modularized deployment codebase for multi-cluster reuse.</div>
+          <div class="proj-tags">
+            <span class="ptag">Kubernetes</span><span class="ptag">Kubespray</span><span class="ptag">Ansible</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- CERTS -->
+    <div id="tpl-education">
+      <div style="color:#565f89;margin-bottom:12px;">$ cat ~/certifications.txt</div>
+      <div class="certs-list">
+        <a class="cert-item" href="https://www.redhat.com/en/services/certification/rhcsa" target="_blank">
+          <span class="cert-badge">🏅</span>
+          <div>
+            <div class="cert-name">Linux - RHCSA</div>
+            <div class="cert-meta">Red Hat &nbsp;·&nbsp; Active</div>
+          </div>
+        </a>
+        <a class="cert-item" href="https://learn.microsoft.com/en-us/certifications/azure-fundamentals/" target="_blank">
+          <span class="cert-badge">🏅</span>
+          <div>
+            <div class="cert-name">Microsoft Certified: Azure Fundamentals</div>
+            <div class="cert-meta">Microsoft &nbsp;·&nbsp; Active</div>
+          </div>
+        </a>
+        <a class="cert-item" href="https://www.credly.com/org/github/badge/github-foundations" target="_blank">
+          <span class="cert-badge">🏅</span>
+          <div>
+            <div class="cert-name">GitHub Foundations</div>
+            <div class="cert-meta">GitHub &nbsp;·&nbsp; Active</div>
+          </div>
+        </a>
+        <a class="cert-item" href="https://www.coursera.org/learn/python-for-applied-data-science-ai" target="_blank">
+          <span class="cert-badge">🏅</span>
+          <div>
+            <div class="cert-name">Python for Data Science</div>
+            <div class="cert-meta">IBM &nbsp;·&nbsp; Active</div>
+          </div>
+        </a>
+        <a class="cert-item" href="https://www.linkedin.com/learning/devops-foundations-continuous-delivery-continuous-integration" target="_blank">
+          <span class="cert-badge">🏅</span>
+          <div>
+            <div class="cert-name">DevOps Foundations: CI/CD</div>
+            <div class="cert-meta">LinkedIn &nbsp;·&nbsp; Active</div>
+          </div>
+        </a>
+        <a class="cert-item" href="https://www.coursera.org/learn/sql-for-data-science" target="_blank">
+          <span class="cert-badge">🏅</span>
+          <div>
+            <div class="cert-name">SQL</div>
+            <div class="cert-meta">Coursera &nbsp;·&nbsp; Active</div>
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <!-- EDUCATION -->
+    <div id="tpl-education2">
+      <div style="color:#565f89;margin-bottom:12px;">$ cat ~/education.txt</div>
+      <div class="certs-list">
+        <div class="cert-item edu-item">
+          <span class="cert-badge">🎓</span>
+          <div>
+            <div class="cert-name">MCA – Cloud Computing &amp; DevOps</div>
+            <div class="cert-meta">Chandigarh University &nbsp;·&nbsp; CGPA 7.70 &nbsp;·&nbsp; 2022 – 2024</div>
+          </div>
+        </div>
+        <div class="cert-item edu-item">
+          <span class="cert-badge">🎓</span>
+          <div>
+            <div class="cert-name">BCA</div>
+            <div class="cert-meta">Himachal Pradesh University &nbsp;·&nbsp; CGPA 8.50 &nbsp;·&nbsp; 2019 – 2022</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTACT -->
+    <div id="tpl-contact">
+      <div style="color:#565f89;margin-bottom:12px;">$ cat ~/contact.json</div>
+      <div class="contact-wrap">
+        <div class="contact-info">
+          <div style="color:#7dcfff;margin-bottom:10px;font-weight:bold;">{</div>
+          <div class="cj-row"><span class="cj-key">"email"</span><span class="cj-sep">:</span> <a href="mailto:rishantshukla2002@gmail.com" class="cj-val">"rishantshukla2002@gmail.com"</a></div>
+          <div class="cj-row"><span class="cj-key">"phone"</span><span class="cj-sep">:</span> <a href="tel:+917018517052" class="cj-val">"+91 7018517052"</a></div>
+          <div class="cj-row"><span class="cj-key">"github"</span><span class="cj-sep">:</span> <a href="https://github.com/rishantshukla" target="_blank" class="cj-val">"github.com/rishantshukla"</a></div>
+          <div class="cj-row"><span class="cj-key">"linkedin"</span><span class="cj-sep">:</span> <a href="https://www.linkedin.com/in/rishantshukla/" target="_blank" class="cj-val">"linkedin.com/in/rishantshukla"</a></div>
+          <div class="cj-row"><span class="cj-key">"location"</span><span class="cj-sep">:</span> <span class="cj-val">"Mohali, India 🇮🇳"</span></div>
+          <div class="cj-row"><span class="cj-key">"status"</span><span class="cj-sep">:</span> <span class="cj-val" style="color:#9ece6a;">"Open to opportunities"</span></div>
+          <div style="color:#7dcfff;margin-top:10px;">}</div>
+        </div>
+        <form class="contact-form" onsubmit="sendEmail(event)">
+          <div style="color:#e0af68;margin-bottom:10px;font-weight:bold;">$ send_message --to rishant</div>
+          <input type="text" name="from_name" placeholder="your_name" required />
+          <input type="email" name="reply_to" placeholder="your_email@domain.com" required />
+          <textarea name="message" placeholder="# your message here..." rows="4" required></textarea>
+          <button type="submit"><i class="fas fa-paper-plane"></i> send_message</button>
+          <div id="email-logs"></div>
+        </form>
+      </div>
+    </div>
+
+    <!-- STATUS -->
+    <div id="tpl-status">
+      <div style="color:#565f89;margin-bottom:10px;">$ systemctl status rishant.service</div>
+      <div class="status-block">
+        <div><span class="status-dot">●</span> <span style="color:#9ece6a;font-weight:bold;">rishant.service</span> <span style="color:#a9b1d6;">— DevOps Engineer @ Vavensoft Pvt. Ltd.</span></div>
+        <div class="status-indent">
+          <div>Loaded: <span style="color:#a9b1d6;">loaded (/home/rishant/.config/career.conf; enabled)</span></div>
+          <div>Active: <span style="color:#9ece6a;">active (running)</span> <span style="color:#565f89;">since May 2024; open to opportunities</span></div>
+          <div>Status: <span style="color:#e0af68;">"Available for full-time &amp; freelance roles"</span></div>
+          <div style="margin-top:8px;">
+            <span style="color:#7dcfff;">Location</span>: Mohali, India<br/>
+            <span style="color:#7dcfff;">Response time</span>: &lt; 24 hours<br/>
+            <span style="color:#7dcfff;">Preferred stack</span>: AWS · Kubernetes · Terraform · Ansible · Python
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LS -->
+    <div id="tpl-ls">
+      <div style="color:#565f89;margin-bottom:6px;">total 8</div>
+      <div class="ls-row"><span class="ls-perm">drwxr-xr-x</span><span class="ls-size">4096</span><span class="ls-name ls-dir">about/</span></div>
+      <div class="ls-row"><span class="ls-perm">drwxr-xr-x</span><span class="ls-size">4096</span><span class="ls-name ls-dir">experience/</span></div>
+      <div class="ls-row"><span class="ls-perm">drwxr-xr-x</span><span class="ls-size">4096</span><span class="ls-name ls-dir">projects/</span></div>
+      <div class="ls-row"><span class="ls-perm">drwxr-xr-x</span><span class="ls-size">4096</span><span class="ls-name ls-dir">skills/</span></div>
+      <div class="ls-row"><span class="ls-perm">-rw-r--r--</span><span class="ls-size"> 128</span><span class="ls-name">resume.pdf</span></div>
+      <div class="ls-row"><span class="ls-perm">-rw-r--r--</span><span class="ls-size">  64</span><span class="ls-name">contact.json</span></div>
+    </div>
+
+  </div><!-- end hidden templates -->
+
+  <script src="src/script.js"></script>
+</body>
+</html>
