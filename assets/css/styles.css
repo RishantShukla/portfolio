@@ -423,6 +423,7 @@ body.matrix-mode #nav-links a:hover { color: #00ff41 !important; background: rgb
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 16px;
+  cursor: pointer;
   transition: border-color 0.2s, transform 0.2s;
 }
 .project-card:hover { border-color: var(--blue); transform: translateY(-2px); }
