@@ -123,7 +123,7 @@ async function runDeployPipeline() {
 
 // ─── BOOT SEQUENCE ────────────────────────────────────────────────────────────
 async function runIntro() {
-  const ip  = await getVisitorIP();
+  const ipPromise = getVisitorIP(); // kick off in parallel, don't block the boot sequence on it
   const now = new Date().toUTCString();
 
   const bootLines = [
@@ -163,6 +163,7 @@ async function runIntro() {
   await typeText(aLine, 'Authenticating public key "rishant_rsa"...');
 
   await new Promise(r => setTimeout(r, 400));
+  const ip = await ipPromise; // by now the fetch has had the whole boot sequence to resolve in the background
   const motdDiv = document.createElement('div');
   motdDiv.className = 'motd-container fade-in';
   motdDiv.innerHTML = `
