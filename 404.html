@@ -20,7 +20,14 @@
       align-items: center;
       justify-content: center;
     }
+    #particles-js {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+    }
     #window {
+      position: relative;
+      z-index: 10;
       width: min(600px, 92vw);
       background: var(--bg2);
       border: 1px solid var(--border);
@@ -72,6 +79,7 @@
   </style>
 </head>
 <body>
+  <div id="particles-js"></div>
   <div id="window">
     <div id="titlebar">
       <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
@@ -89,6 +97,47 @@
   </div>
   <script>
     document.getElementById('requested-url').textContent = window.location.href;
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+  <script>
+    particlesJS('particles-js', {
+      particles: {
+        number: { value: 80, density: { enable: true, value_area: 800 } },
+        color: { value: '#7dcfff' },
+        shape: { type: 'circle' },
+        opacity: { value: 0.35, random: true, anim: { enable: false } },
+        size: { value: 2, random: true },
+        line_linked: {
+          enable: true,
+          distance: 150,
+          color: '#7dcfff',
+          opacity: 0.2,
+          width: 0.8
+        },
+        move: {
+          enable: true,
+          speed: 1.2,
+          direction: 'none',
+          random: true,
+          straight: false,
+          out_mode: 'out',
+          bounce: false
+        }
+      },
+      interactivity: {
+        detect_on: 'canvas',
+        events: {
+          onhover: { enable: true, mode: 'grab' },
+          onclick: { enable: true, mode: 'push' },
+          resize: true
+        },
+        modes: {
+          grab: { distance: 180, line_linked: { opacity: 0.9 } },
+          push: { particles_nb: 3 }
+        }
+      },
+      retina_detect: true
+    });
   </script>
 </body>
 </html>
