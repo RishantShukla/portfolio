@@ -1,5 +1,5 @@
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
-const config = { typeSpeed: 12, bootLineDelay: 110 };
+const config = { typeSpeed: 8, bootLineDelay: 70 };
 let isBooting = true;
 
 const terminalBody = document.getElementById('terminal');
@@ -150,7 +150,7 @@ async function runIntro() {
     await new Promise(r => setTimeout(r, config.bootLineDelay));
   }
 
-  await new Promise(r => setTimeout(r, 200));
+  await new Promise(r => setTimeout(r, 120));
   const sshDiv = document.createElement('div');
   history.appendChild(sshDiv);
   const cLine = document.createElement('div');
@@ -162,7 +162,7 @@ async function runIntro() {
   sshDiv.appendChild(aLine);
   await typeText(aLine, 'Authenticating public key "rishant_rsa"...');
 
-  await new Promise(r => setTimeout(r, 400));
+  await new Promise(r => setTimeout(r, 250));
   const ip = await ipPromise; // by now the fetch has had the whole boot sequence to resolve in the background
   const motdDiv = document.createElement('div');
   motdDiv.className = 'motd-container fade-in';
@@ -183,13 +183,13 @@ async function runIntro() {
   history.appendChild(motdDiv);
   scrollToBottom();
 
-  await new Promise(r => setTimeout(r, 500));
+  await new Promise(r => setTimeout(r, 300));
   await typeCommand('about');
-  await new Promise(r => setTimeout(r, 200));
+  await new Promise(r => setTimeout(r, 120));
   addToHistory(document.getElementById('tpl-neofetch').innerHTML);
 
   await typeCommand('help');
-  await new Promise(r => setTimeout(r, 200));
+  await new Promise(r => setTimeout(r, 120));
   addToHistory(document.getElementById('tpl-help').innerHTML);
 
   realPrompt.classList.remove('hidden');
