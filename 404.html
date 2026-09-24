@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>404 | Rishant Shukla</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <style>
+    :root {
+      --bg: #1a1b26; --bg2: #16161e; --bg3: #1f2335; --border: #292e42;
+      --fg: #a9b1d6; --fg-dim: #565f89; --blue: #7dcfff; --green: #9ece6a; --red: #f7768e;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      font-family: 'Courier New', Courier, monospace;
+      color: var(--fg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #window {
+      width: min(600px, 92vw);
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+      overflow: hidden;
+    }
+    #titlebar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: var(--bg3);
+      border-bottom: 1px solid var(--border);
+    }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .red { background: #ff5f57; } .yellow { background: #febc2e; } .green { background: #28c840; }
+    #titletext { flex: 1; text-align: center; color: var(--fg-dim); font-size: 13px; margin-right: 52px; }
+    #body { padding: 32px 28px; font-size: 15px; line-height: 1.9; }
+    .prompt { color: var(--green); }
+    .arrow { color: var(--blue); }
+    .cmd { color: var(--fg); }
+    .status { color: var(--red); font-weight: bold; }
+    .dim { color: var(--fg-dim); }
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .cursor {
+      display: inline-block; width: 9px; height: 17px;
+      background: var(--blue); vertical-align: -3px; margin-left: 2px;
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+  </style>
+</head>
+<body>
+  <div id="window">
+    <div id="titlebar">
+      <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+      <span id="titletext">rishant@devops: ~ (ssh)</span>
+    </div>
+    <div id="body">
+      <div><span class="prompt">rishant</span><span class="dim">@</span><span class="arrow">devops</span> ➜ <span class="cmd">curl -I https://rishant.vercel.app/</span></div>
+      <div>&nbsp;</div>
+      <div class="status">HTTP/1.1 404 Not Found</div>
+      <div class="dim">Error: The page you're looking for doesn't exist on this server.</div>
+      <div>&nbsp;</div>
+      <div><span class="prompt">rishant</span><span class="dim">@</span><span class="arrow">devops</span> ➜ <span class="cmd">cd ~ &amp;&amp; <a href="/">open home</a></span><span class="cursor"></span></div>
+    </div>
+  </div>
+</body>
+</html>

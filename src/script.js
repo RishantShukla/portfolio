@@ -736,5 +736,32 @@ function sendEmail(e) {
     });
 }
 
+// ─── MOBILE NAV (hamburger) ─────────────────────────────────────────────────
+const navHamburger = document.getElementById('nav-hamburger');
+const navLinksEl    = document.getElementById('nav-links');
+
+function closeMobileNav() {
+  navLinksEl.classList.remove('mobile-open');
+  navHamburger.setAttribute('aria-expanded', 'false');
+}
+
+navHamburger.addEventListener('click', e => {
+  e.stopPropagation();
+  const isOpen = navLinksEl.classList.toggle('mobile-open');
+  navHamburger.setAttribute('aria-expanded', String(isOpen));
+});
+
+navLinksEl.addEventListener('click', e => {
+  if (e.target.tagName === 'A') closeMobileNav();
+});
+
+document.addEventListener('click', e => {
+  if (navLinksEl.classList.contains('mobile-open') &&
+      !navLinksEl.contains(e.target) &&
+      e.target !== navHamburger) {
+    closeMobileNav();
+  }
+});
+
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
 window.onload = runIntro;
