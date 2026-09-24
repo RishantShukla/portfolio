@@ -261,11 +261,23 @@ body.matrix-mode #nav-links a:hover { color: #00ff41 !important; background: rgb
 .cmd    { color: var(--fg); }
 
 /* ── HIDDEN INPUT ─────────────────────────────────────────────────────────── */
+/* Real input stays a normal, properly-sized element (just invisible) so
+   mobile keyboards track cursor/selection correctly. A degenerate 1x1px
+   size is known to confuse some Android keyboards' text-composition
+   logic, causing characters to insert at position 0 instead of the
+   cursor (e.g. typing "hi" becomes "ih"). */
 #command-input {
   position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   opacity: 0;
+  border: none;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
   pointer-events: none;
-  width: 1px; height: 1px;
 }
 #real-prompt { position: relative; }
 #real-prompt.hidden { display: none; }
