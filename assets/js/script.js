@@ -310,8 +310,8 @@ function processCommand(cmd) {
     case 'ls -la':
     case 'ls -l':   addToHistory(document.getElementById('tpl-ls').innerHTML); break;
     case 'resume':
-      addToHistory(`<div style="color:#a9b1d6">Opening resume... <a href="./resume.pdf" target="_blank" style="color:#7dcfff">[Download PDF]</a></div>`);
-      window.open('./resume.pdf', '_blank');
+      addToHistory(`<div style="color:#a9b1d6">Opening resume... <a href="./documents/resume.pdf" target="_blank" style="color:#7dcfff">[Download PDF]</a></div>`);
+      window.open('./documents/resume.pdf', '_blank');
       break;
     case 'm': toggleMatrix(); break;
     case 'linkedin':
