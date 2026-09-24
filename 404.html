@@ -53,6 +53,22 @@
       animation: blink 1s step-end infinite;
     }
     @keyframes blink { 50% { opacity: 0; } }
+    .home-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 20px;
+      padding: 10px 18px;
+      background: var(--bg3);
+      border: 1px solid var(--blue);
+      border-radius: 6px;
+      color: var(--blue) !important;
+      font-size: 14px;
+      font-weight: bold;
+      text-decoration: none !important;
+      transition: background 0.15s, transform 0.15s;
+    }
+    .home-btn:hover { background: rgba(125,207,255,0.12); transform: translateY(-1px); }
   </style>
 </head>
 <body>
@@ -67,7 +83,8 @@
       <div class="status">HTTP/1.1 404 Not Found</div>
       <div class="dim">Error: The page you're looking for doesn't exist on this server.</div>
       <div>&nbsp;</div>
-      <div><span class="prompt">rishant</span><span class="dim">@</span><span class="arrow">devops</span> ➜ <span class="cmd">cd ~ &amp;&amp; <a href="/">open home</a></span><span class="cursor"></span></div>
+      <div><span class="prompt">rishant</span><span class="dim">@</span><span class="arrow">devops</span> ➜ <span class="cmd">cd ~</span><span class="cursor"></span></div>
+      <a href="/" class="home-btn">← Return to homepage</a>
     </div>
   </div>
   <script>
