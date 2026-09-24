@@ -62,7 +62,7 @@
       <span id="titletext">rishant@devops: ~ (ssh)</span>
     </div>
     <div id="body">
-      <div><span class="prompt">rishant</span><span class="dim">@</span><span class="arrow">devops</span> ➜ <span class="cmd">curl -I https://rishant.vercel.app/</span></div>
+      <div><span class="prompt">rishant</span><span class="dim">@</span><span class="arrow">devops</span> ➜ <span class="cmd">curl -I <span id="requested-url"></span></span></div>
       <div>&nbsp;</div>
       <div class="status">HTTP/1.1 404 Not Found</div>
       <div class="dim">Error: The page you're looking for doesn't exist on this server.</div>
@@ -70,5 +70,8 @@
       <div><span class="prompt">rishant</span><span class="dim">@</span><span class="arrow">devops</span> ➜ <span class="cmd">cd ~ &amp;&amp; <a href="/">open home</a></span><span class="cursor"></span></div>
     </div>
   </div>
+  <script>
+    document.getElementById('requested-url').textContent = window.location.href;
+  </script>
 </body>
 </html>
