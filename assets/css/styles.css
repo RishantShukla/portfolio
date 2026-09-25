@@ -254,7 +254,10 @@ body.matrix-mode #nav-links button:hover { color: #00ff41 !important; background
   border-radius: 999px;
   color: var(--green);
   font-family: inherit;
-  font-size: 11px;
+  /* Matches the clock's size so the two baselines coincide. Centre-aligning
+     different font sizes leaves their baselines ~0.5px apart, which reads as
+     misalignment once the page is zoomed. */
+  font-size: 12px;
   font-weight: normal;
   line-height: 1;
   padding: 4px 10px;
