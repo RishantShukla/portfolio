@@ -61,8 +61,6 @@
   </script>
 
   <link rel="stylesheet" href="assets/css/styles.css" />
-  <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'" />
-  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" /></noscript>
   <script defer src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 
@@ -159,6 +157,7 @@
 
     <!-- HELP -->
     <div id="tpl-help">
+      <h2 class="sr-only">Available commands</h2>
       <div class="help-header">[ Available Commands ]</div>
       <div class="help-hint">// Type a command and press Enter, or simply <span style="color:#7dcfff;text-decoration:underline;">click on any highlighted command</span> to execute it.</div>
 
@@ -214,6 +213,7 @@
 
     <!-- NEOFETCH / WHOAMI -->
     <div id="tpl-neofetch">
+      <h2 class="sr-only">About Rishant Shukla</h2>
       <div class="neofetch-wrap">
         <div class="neofetch-info">
           <div class="nf-row"><span class="nf-key">User</span><span class="nf-sep">:</span><span class="nf-val">Rishant Shukla</span></div>
@@ -228,9 +228,9 @@
             &nbsp;· Tech stack: <span class="clickable-cmd" data-cmd="skills">skills</span>
           </div>
           <div style="margin-top:14px;display:flex;gap:14px;">
-            <a href="https://github.com/rishantshukla" target="_blank" rel="noopener noreferrer" class="nf-link"><i class="fab fa-github"></i> GitHub</a>
-            <a href="https://www.linkedin.com/in/rishantshukla/" target="_blank" rel="noopener noreferrer" class="nf-link"><i class="fab fa-linkedin"></i> LinkedIn</a>
-            <a href="mailto:rishantshukla2002@gmail.com" class="nf-link"><i class="fas fa-envelope"></i> Email</a>
+            <a href="https://github.com/rishantshukla" target="_blank" rel="noopener noreferrer" class="nf-link"><svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg> GitHub</a>
+            <a href="https://www.linkedin.com/in/rishantshukla/" target="_blank" rel="noopener noreferrer" class="nf-link"><svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg> LinkedIn</a>
+            <a href="mailto:rishantshukla2002@gmail.com" class="nf-link"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2" /> <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg> Email</a>
           </div>
         </div>
       </div>
@@ -238,6 +238,7 @@
 
     <!-- GIT LOG / EXPERIENCE -->
     <div id="tpl-git-log">
+      <h2 class="sr-only">Work experience</h2>
       <div style="color:#565f89;margin-bottom:12px;">$ git log --all --oneline --graph --decorate</div>
 
       <div class="git-entry">
@@ -304,6 +305,7 @@
 
     <!-- SKILLS / TREE -->
     <div id="tpl-skills">
+      <h2 class="sr-only">Technical skills</h2>
       <div style="color:#565f89;margin-bottom:10px;">$ tree ~/skills --depth 2</div>
       <div class="tree-root">
         <div class="tree-line"><span class="tree-branch">~/skills</span></div>
@@ -329,6 +331,7 @@
 
     <!-- PROJECTS -->
     <div id="tpl-projects">
+      <h2 class="sr-only">Projects and case studies</h2>
       <div style="color:#565f89;margin-bottom:12px;">$ ls -la ~/projects/</div>
       <div class="projects-grid">
 
@@ -337,7 +340,7 @@
             <span class="proj-icon" aria-hidden="true">☁️</span>
             <span class="proj-title">AWS Multi-Account Org &amp; SSO</span>
             <div class="proj-links">
-              <i class="fas fa-file-pdf" aria-hidden="true"></i>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M10 9H8" /> <path d="M16 13H8" /> <path d="M16 17H8" /></svg>
               <span class="sr-only">(opens case study PDF in a new tab)</span>
             </div>
           </div>
@@ -352,7 +355,7 @@
             <span class="proj-icon" aria-hidden="true">🤖</span>
             <span class="proj-title">ShopfloorGPT on AKS</span>
             <div class="proj-links">
-              <i class="fas fa-file-pdf" aria-hidden="true"></i>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M10 9H8" /> <path d="M16 13H8" /> <path d="M16 17H8" /></svg>
               <span class="sr-only">(opens case study PDF in a new tab)</span>
             </div>
           </div>
@@ -367,7 +370,7 @@
             <span class="proj-icon" aria-hidden="true">🔄</span>
             <span class="proj-title">Kubeadm → Kubespray Migration</span>
             <div class="proj-links">
-              <i class="fas fa-file-pdf" aria-hidden="true"></i>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M10 9H8" /> <path d="M16 13H8" /> <path d="M16 17H8" /></svg>
               <span class="sr-only">(opens case study PDF in a new tab)</span>
             </div>
           </div>
@@ -382,6 +385,7 @@
 
     <!-- CERTS -->
     <div id="tpl-education">
+      <h2 class="sr-only">Certifications</h2>
       <div style="color:#565f89;margin-bottom:12px;">$ cat ~/certifications.txt</div>
       <div class="certs-list">
         <a class="cert-item" href="https://www.credly.com/badges/a978393e-c9ad-4e17-a5c0-4e0b625972fd/public_url" target="_blank" rel="noopener noreferrer">
@@ -431,6 +435,7 @@
 
     <!-- EDUCATION -->
     <div id="tpl-education2">
+      <h2 class="sr-only">Education</h2>
       <div style="color:#565f89;margin-bottom:12px;">$ cat ~/education.txt</div>
       <div class="certs-list">
         <div class="cert-item edu-item">
@@ -452,6 +457,7 @@
 
     <!-- CONTACT -->
     <div id="tpl-contact">
+      <h2 class="sr-only">Contact</h2>
       <div style="color:#565f89;margin-bottom:12px;">$ cat ~/contact.json</div>
       <div class="contact-wrap">
         <div class="contact-info">
@@ -472,7 +478,7 @@
           <input id="cf-email" type="email" name="reply_to" placeholder="your_email@domain.com" required />
           <label class="sr-only" for="cf-message">Your message</label>
           <textarea id="cf-message" name="message" placeholder="# your message here..." rows="4" required></textarea>
-          <button type="submit"><i class="fas fa-paper-plane" aria-hidden="true"></i> send_message</button>
+          <button type="submit"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z" /> <path d="m21.854 2.147-10.94 10.939" /></svg> send_message</button>
           <div id="email-logs" role="status" aria-live="polite"></div>
         </form>
       </div>
@@ -480,6 +486,7 @@
 
     <!-- STATUS -->
     <div id="tpl-status">
+      <h2 class="sr-only">Availability</h2>
       <div style="color:#565f89;margin-bottom:10px;">$ systemctl status rishant.service</div>
       <div class="status-block">
         <div><span class="status-dot">●</span> <span style="color:#9ece6a;font-weight:bold;">rishant.service</span> <span style="color:#a9b1d6;">— DevOps Engineer @ ResourceDekho IT Services</span></div>

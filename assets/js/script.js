@@ -285,6 +285,7 @@ cmdInput.addEventListener('keydown', function(e) {
     if (cmd) commandHistory.push(cmd);
     historyIndex = -1;
     addCommandToHistory(cmd);
+    if (cmd) trackCommand(cmd, 'typed');
     processCommand(cmd);
     scrollToBottom();
   }
@@ -308,6 +309,23 @@ function findClosestCommand(input) {
     if (d < bestScore && d <= 3) { bestScore = d; best = cmd; }
   }
   return best;
+}
+
+// ─── ANALYTICS ────────────────────────────────────────────────────────────────
+// Which commands visitors actually run. window.va is stubbed in index.html, so
+// this is a no-op queue push if the Vercel script never loads.
+// NOTE: custom events need a Vercel Pro plan — on Hobby only page views record,
+// and these calls are silently dropped.
+function trackCommand(cmd, source) {
+  const known = availableCommands.includes(cmd);
+  try {
+    window.va('event', {
+      name: 'command',
+      // Unknown input is bucketed rather than sent verbatim: it is free text
+      // typed by a stranger and does not belong in an analytics dashboard.
+      data: { command: known ? cmd : '(unrecognized)', source }
+    });
+  } catch (_) { /* analytics must never break the terminal */ }
 }
 
 // ─── COMMAND PROCESSOR ────────────────────────────────────────────────────────
@@ -612,8 +630,9 @@ async function runPingSimulation(host) {
 }
 
 // ─── CLICK-TO-RUN COMMANDS ────────────────────────────────────────────────────
-async function runCommandClick(cmd) {
+async function runCommandClick(cmd, source = 'link') {
   if (isBooting) return;
+  trackCommand(cmd, source);
   const div = document.createElement('div');
   div.className = 'prompt-line';
   div.innerHTML = `<span class="user">rishant</span><span class="at">@</span><span class="host">devops</span><span class="arrow">➜</span> <span class="cmd"></span>`;
@@ -806,7 +825,7 @@ navLinksEl.addEventListener('click', e => {
   const btn = e.target.closest('button[data-cmd]');
   if (!btn) return;
   closeMobileNav();
-  runCommandClick(btn.dataset.cmd);
+  runCommandClick(btn.dataset.cmd, 'nav');
 });
 
 document.addEventListener('click', e => {

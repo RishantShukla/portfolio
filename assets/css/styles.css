@@ -15,6 +15,15 @@
   border: 0;
 }
 
+/* Inline SVG icons (replaced Font Awesome — ~100KB of CDN CSS for five glyphs) */
+.icon {
+  width: 1em;
+  height: 1em;
+  display: inline-block;
+  vertical-align: -0.125em;
+  flex: none;
+}
+
 /* Keyboard focus ring — the site hides the native cursor, so this is the only
    affordance keyboard users get */
 :focus-visible {
