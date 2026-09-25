@@ -228,7 +228,10 @@ body.matrix-mode #nav-links button:hover { color: #00ff41 !important; background
   letter-spacing: 0.5px;
   text-shadow: 0 0 8px rgba(125, 207, 255, 0.6);
 }
-#title-bar-right { display: flex; align-items: center; gap: 10px; color: var(--yellow); font-size: 12px; font-weight: bold; }
+/* line-height:1 keeps the line box an integer (12px). The inherited 1.6 gave
+   19.2px, which cannot land on a whole device pixel at 1x, leaving the clock
+   and the availability badge ~0.6px out of alignment. */
+#title-bar-right { display: flex; align-items: center; gap: 10px; color: var(--yellow); font-size: 12px; font-weight: bold; line-height: 1; }
 #nav-hamburger {
   display: none;
   background: none;
