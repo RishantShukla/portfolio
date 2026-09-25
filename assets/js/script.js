@@ -20,13 +20,13 @@ function escapeHTML(str) {
   return str.replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]||t));
 }
 
-// ─── CAREER UPTIME ────────────────────────────────────────────────────────────
-// Rendered into the About block's Uptime row. Derived from a date rather than
-// hard-coded, so it cannot go stale. Rounded down to whole years ("2+ years")
-// so it only changes on an anniversary rather than every month.
+// ─── EXPERIENCE ───────────────────────────────────────────────────────────────
+// Rendered into the About block's Experience row. Derived from a date rather
+// than hard-coded, so it cannot go stale. Rounded down to whole years
+// ("2+ years") so it only changes on an anniversary rather than every month.
 const CAREER_START = new Date(2024, 4, 1); // May 2024 — first DevOps role
 
-function careerUptime() {
+function careerExperience() {
   const now = new Date();
   let months = (now.getFullYear() - CAREER_START.getFullYear()) * 12
              + (now.getMonth() - CAREER_START.getMonth());
@@ -36,8 +36,8 @@ function careerUptime() {
   return `${Math.floor(months / 12)}+ years`;
 }
 
-function fillCareerUptime(root) {
-  root.querySelectorAll('.nf-uptime').forEach(el => { el.textContent = careerUptime(); });
+function fillExperience(root) {
+  root.querySelectorAll('.nf-experience').forEach(el => { el.textContent = careerExperience(); });
 }
 
 // Clickable commands are <span>/<td>, so they need an explicit role and tab stop
@@ -58,7 +58,7 @@ function addToHistory(html) {
   div.style.marginBottom = '20px';
   div.classList.add('fade-in');
   makeClickableCmdsFocusable(div);
-  fillCareerUptime(div);
+  fillExperience(div);
   history.appendChild(div);
   
   // Add separator line after command output
