@@ -242,6 +242,61 @@ body.matrix-mode #nav-links button:hover { color: #00ff41 !important; background
 }
 #nav-hamburger:hover { background: rgba(125,207,255,0.1); color: var(--blue); }
 
+/* ── AVAILABILITY BADGE ───────────────────────────────────────────────────────
+   Runs `status` on click. The availability details were previously reachable
+   only by typing a command nobody would guess. */
+#availability {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(158,206,106,0.08);
+  border: 1px solid rgba(158,206,106,0.3);
+  border-radius: 999px;
+  color: var(--green);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: normal;
+  line-height: 1;
+  padding: 4px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+#availability:hover {
+  background: rgba(158,206,106,0.16);
+  border-color: rgba(158,206,106,0.6);
+}
+.avail-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px rgba(158,206,106,0.9);
+  animation: availPulse 2.4s ease-in-out infinite;
+}
+@keyframes availPulse {
+  0%, 100% { opacity: 1;   transform: scale(1); }
+  50%      { opacity: 0.45; transform: scale(0.82); }
+}
+
+/* ── COPY BUTTON (contact values) ─────────────────────────────────────────── */
+.copy-btn {
+  margin-left: 10px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--fg-dim);
+  font-family: inherit;
+  font-size: 10px;
+  line-height: 1;
+  padding: 3px 7px;
+  cursor: pointer;
+  vertical-align: middle;
+  transition: color 0.15s, border-color 0.15s;
+}
+.copy-btn:hover { color: var(--blue); border-color: var(--blue); }
+.copy-btn.copied { color: var(--green); border-color: var(--green); }
+
 .tb-dot {
   width: 13px; height: 13px;
   border-radius: 50%;
@@ -638,6 +693,10 @@ a.cert-item:hover .cert-name { color: var(--blue); }
   .motd-grid { grid-template-columns: 1fr; }
   .projects-grid { grid-template-columns: 1fr; }
   #title-bar-center { display: none; }
+
+  /* Title bar is tight on phones — keep the badge, drop its label */
+  .avail-text { display: none; }
+  #availability { padding: 5px; gap: 0; }
 
   #terminal-window { height: 94vh; height: 94dvh; }
 

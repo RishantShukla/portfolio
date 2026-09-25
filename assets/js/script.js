@@ -806,6 +806,52 @@ function sendEmail(e) {
     });
 }
 
+// ─── COPY TO CLIPBOARD ────────────────────────────────────────────────────────
+// Selecting text by hand is awkward here: the native cursor is hidden and a
+// click anywhere refocuses the command input. Delegated, because the contact
+// block is injected into #history rather than present at load.
+async function copyValue(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // clipboard API needs a secure context and permission; fall back
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch { ok = false; }
+    ta.remove();
+    return ok;
+  }
+}
+
+document.addEventListener('click', async e => {
+  const btn = e.target.closest('.copy-btn');
+  if (!btn) return;
+  const ok = await copyValue(btn.dataset.copy);
+  btn.textContent = ok ? 'copied' : 'failed';
+  btn.classList.toggle('copied', ok);
+  // announce to screen readers, which would otherwise get no feedback at all
+  btn.setAttribute('aria-label', ok ? 'Copied to clipboard' : 'Copy failed');
+  clearTimeout(btn._t);
+  btn._t = setTimeout(() => {
+    btn.textContent = 'copy';
+    btn.classList.remove('copied');
+    btn.setAttribute('aria-label', `Copy ${btn.dataset.copy}`);
+  }, 1600);
+});
+
+// ─── AVAILABILITY BADGE ───────────────────────────────────────────────────────
+const availabilityBtn = document.getElementById('availability');
+availabilityBtn.addEventListener('click', () => {
+  runCommandClick(availabilityBtn.dataset.cmd, 'badge');
+});
+
 // ─── MOBILE NAV (hamburger) ─────────────────────────────────────────────────
 const navHamburger = document.getElementById('nav-hamburger');
 const navLinksEl    = document.getElementById('nav-links');
