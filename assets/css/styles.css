@@ -281,21 +281,30 @@ body.matrix-mode #nav-links button:hover { color: #00ff41 !important; background
 
 /* ── COPY BUTTON (contact values) ─────────────────────────────────────────── */
 .copy-btn {
-  margin-left: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
   background: none;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: 4px;
   color: var(--fg-dim);
-  font-family: inherit;
-  font-size: 10px;
+  font-size: 13px;
   line-height: 1;
-  padding: 3px 7px;
+  padding: 3px;
   cursor: pointer;
   vertical-align: middle;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color 0.15s, background 0.15s;
 }
-.copy-btn:hover { color: var(--blue); border-color: var(--blue); }
-.copy-btn.copied { color: var(--green); border-color: var(--green); }
+.copy-btn:hover { color: var(--blue); background: rgba(125,207,255,0.12); }
+.copy-btn.copied { color: var(--green); }
+.copy-btn.failed { color: var(--red); }
+
+/* Both icons ship in the markup; .copied swaps which one shows, so there is no
+   innerHTML rewriting on click. */
+.copy-btn .check-icon { display: none; }
+.copy-btn.copied .copy-icon  { display: none; }
+.copy-btn.copied .check-icon { display: inline-block; }
 
 .tb-dot {
   width: 13px; height: 13px;

@@ -833,16 +833,18 @@ async function copyValue(text) {
 document.addEventListener('click', async e => {
   const btn = e.target.closest('.copy-btn');
   if (!btn) return;
+  // Remember the original label once; the icons live in the markup, so only the
+  // class and the label change here.
+  const label = btn._label || (btn._label = btn.getAttribute('aria-label'));
   const ok = await copyValue(btn.dataset.copy);
-  btn.textContent = ok ? 'copied' : 'failed';
   btn.classList.toggle('copied', ok);
+  btn.classList.toggle('failed', !ok);
   // announce to screen readers, which would otherwise get no feedback at all
   btn.setAttribute('aria-label', ok ? 'Copied to clipboard' : 'Copy failed');
   clearTimeout(btn._t);
   btn._t = setTimeout(() => {
-    btn.textContent = 'copy';
-    btn.classList.remove('copied');
-    btn.setAttribute('aria-label', `Copy ${btn.dataset.copy}`);
+    btn.classList.remove('copied', 'failed');
+    btn.setAttribute('aria-label', label);
   }, 1600);
 });
 
