@@ -22,7 +22,8 @@ function escapeHTML(str) {
 
 // ─── CAREER UPTIME ────────────────────────────────────────────────────────────
 // Rendered into the About block's Uptime row. Derived from a date rather than
-// hard-coded, so it cannot go stale the way a written-out "2 years" would.
+// hard-coded, so it cannot go stale. Rounded down to whole years ("2+ years")
+// so it only changes on an anniversary rather than every month.
 const CAREER_START = new Date(2024, 4, 1); // May 2024 — first DevOps role
 
 function careerUptime() {
@@ -30,13 +31,9 @@ function careerUptime() {
   let months = (now.getFullYear() - CAREER_START.getFullYear()) * 12
              + (now.getMonth() - CAREER_START.getMonth());
   if (now.getDate() < CAREER_START.getDate()) months--;
-  if (months < 1) return 'just started';
-  const years = Math.floor(months / 12);
-  const rem   = months % 12;
-  const parts = [];
-  if (years) parts.push(`${years} year${years === 1 ? '' : 's'}`);
-  if (rem)   parts.push(`${rem} month${rem === 1 ? '' : 's'}`);
-  return parts.join(', ');
+  if (months < 1)  return 'just started';
+  if (months < 12) return `${months} month${months === 1 ? '' : 's'}`;
+  return `${Math.floor(months / 12)}+ years`;
 }
 
 function fillCareerUptime(root) {
