@@ -1,6 +1,48 @@
 /* ── RESET ────────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Available to screen readers, hidden visually */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Keyboard focus ring — the site hides the native cursor, so this is the only
+   affordance keyboard users get */
+:focus-visible {
+  outline: 2px solid #7dcfff;
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* No-JS fallback */
+.noscript-fallback {
+  position: relative;
+  z-index: 9999;
+  max-width: 760px;
+  margin: 40px auto;
+  padding: 28px;
+  background: #1f2335;
+  border: 1px solid #292e42;
+  border-radius: 8px;
+  color: #a9b1d6;
+  font-family: 'Courier New', Courier, monospace;
+  cursor: auto;
+}
+.noscript-fallback h2 { color: #9ece6a; margin-bottom: 12px; }
+.noscript-fallback ul { margin: 12px 0 12px 20px; }
+.noscript-fallback li { margin-bottom: 6px; }
+.noscript-fallback p  { margin: 12px 0; line-height: 1.6; }
+.noscript-fallback a  { color: #7dcfff; }
+
 :root {
   --bg:        #1a1b26;
   --bg2:       #16161e;
@@ -62,8 +104,10 @@ body.matrix-mode #terminal .typing-cursor { background: #00ff41 !important; }
 body.matrix-mode #title-bar { background: #001a00; border-bottom-color: rgba(0,255,0,0.3); }
 body.matrix-mode #title-bar-center { color: #00ff41 !important; text-shadow: 0 0 8px rgba(0,255,0,0.8); }
 body.matrix-mode #nav-links { background: #001a00; border-bottom-color: rgba(0,255,0,0.2); }
-body.matrix-mode #nav-links a { color: #00cc33 !important; }
-body.matrix-mode #nav-links a:hover { color: #00ff41 !important; background: rgba(0,255,0,0.1); }
+body.matrix-mode #nav-links a,
+body.matrix-mode #nav-links button { color: #00cc33 !important; }
+body.matrix-mode #nav-links a:hover,
+body.matrix-mode #nav-links button:hover { color: #00ff41 !important; background: rgba(0,255,0,0.1); }
 
 /* ── CURSOR ───────────────────────────────────────────────────────────────── */
 #cursor-dot, #cursor-outline {
@@ -216,17 +260,22 @@ body.matrix-mode #nav-links a:hover { color: #00ff41 !important; background: rgb
   z-index: 101;
 }
 #nav-links::-webkit-scrollbar { display: none; }
-#nav-links a {
+#nav-links a,
+#nav-links button {
   color: #a9b1d6;
   text-decoration: none;
   font-size: 12px;
+  font-family: inherit;
+  background: none;
+  border: 0;
   padding: 4px 12px;
   border-radius: 4px;
   cursor: pointer;
   white-space: nowrap;
   transition: color 0.15s, background 0.15s;
 }
-#nav-links a:hover { color: #7dcfff; background: var(--bg4); }
+#nav-links a:hover,
+#nav-links button:hover { color: #7dcfff; background: var(--bg4); }
 
 /* ── TERMINAL BODY ────────────────────────────────────────────────────────── */
 #terminal {
@@ -443,6 +492,9 @@ body.matrix-mode #nav-links a:hover { color: #00ff41 !important; background: rgb
   gap: 14px;
 }
 .project-card {
+  display: block;
+  color: inherit;
+  text-decoration: none;
   background: var(--bg3);
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -598,9 +650,38 @@ a.cert-item:hover .cert-name { color: var(--blue); }
     box-shadow: 0 12px 24px rgba(0,0,0,0.4);
   }
   #nav-links.mobile-open { display: flex; z-index: 200; }
-  #nav-links a {
+  #nav-links a,
+  #nav-links button {
     padding: 12px 14px;
     font-size: 14px;
     border-radius: 6px;
+    text-align: left;
   }
+}
+
+/* ── REDUCED MOTION ───────────────────────────────────────────────────────────
+   The site leans on constant motion: particles, a typing animation, matrix
+   rain and a trailing cursor. Users who ask for reduced motion get the same
+   content, statically. JS also reads this query to skip the typing animation
+   and to not start particles at all. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Decorative, permanently in motion — remove rather than slow down */
+  #particles-js,
+  #matrix-canvas,
+  #cursor-dot,
+  #cursor-outline { display: none !important; }
+
+  /* The native cursor is hidden in favour of the custom one; give it back */
+  html, body { cursor: auto !important; }
+
+  /* The blinking caret is the one animation worth keeping, but slow it right
+     down so it reads as a caret rather than a strobe */
+  .typing-cursor { animation-duration: 1.5s !important; }
 }

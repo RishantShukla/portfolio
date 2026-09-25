@@ -2,6 +2,11 @@
 const config = { typeSpeed: 8, bootLineDelay: 70 };
 let isBooting = true;
 
+// Honoured by typeText (renders instantly) and by the particles/matrix effects.
+// Read live rather than cached so it follows an OS-level change mid-session.
+const reduceMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+const prefersReducedMotion = () => reduceMotionQuery.matches;
+
 const terminalBody = document.getElementById('terminal');
 const history      = document.getElementById('history');
 const realPrompt   = document.getElementById('real-prompt');
@@ -15,11 +20,24 @@ function escapeHTML(str) {
   return str.replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]||t));
 }
 
+// Clickable commands are <span>/<td>, so they need an explicit role and tab stop
+// to be reachable without a mouse. Applied on injection so it also covers the
+// ones built at runtime, like the "did you mean" suggestion.
+function makeClickableCmdsFocusable(root) {
+  root.querySelectorAll('.clickable-cmd').forEach(el => {
+    el.setAttribute('role', 'button');
+    el.setAttribute('tabindex', '0');
+    const cmd = el.dataset.cmd || el.textContent.trim();
+    el.setAttribute('aria-label', `Run command: ${cmd}`);
+  });
+}
+
 function addToHistory(html) {
   const div = document.createElement('div');
   div.innerHTML = html;
   div.style.marginBottom = '20px';
   div.classList.add('fade-in');
+  makeClickableCmdsFocusable(div);
   history.appendChild(div);
   
   // Add separator line after command output
@@ -40,6 +58,11 @@ function addCommandToHistory(cmd) {
 }
 
 function typeText(element, text) {
+  if (prefersReducedMotion()) {
+    element.appendChild(document.createTextNode(text));
+    scrollToBottom();
+    return Promise.resolve();
+  }
   return new Promise(resolve => {
     let i = 0;
     const cursor = document.createElement('span');
@@ -440,7 +463,7 @@ function processCommand(cmd) {
       setTimeout(() => {
         addToHistory(`<div style="color:#f7768e;font-size:16px;margin-top:10px;">${ending}</div>`);
         scrollToBottom();
-      }, 18000);
+      }, 12000);
       break;
     }
     case 'fortune': {
@@ -603,6 +626,15 @@ async function runCommandClick(cmd) {
   scrollToBottom();
 }
 
+// Enter / Space on a focused clickable command, matching native button behaviour
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const el = e.target.closest?.('.clickable-cmd');
+  if (!el) return;
+  e.preventDefault();
+  runCommandClick(el.dataset.cmd || el.textContent.trim());
+});
+
 document.addEventListener('click', e => {
   if (e.target.classList.contains('clickable-cmd')) {
     const cmd = e.target.dataset.cmd || e.target.textContent.trim();
@@ -626,8 +658,15 @@ canvas.width  = window.innerWidth;
 canvas.height = window.innerHeight;
 const chars   = '0123456789ABCDEF';
 const fontSize = 16;
-const columns  = canvas.width / fontSize;
-const drops    = Array(Math.floor(columns)).fill(1);
+let drops      = Array(Math.floor(canvas.width / fontSize)).fill(1);
+
+// Without this the canvas keeps its load-time dimensions, so the rain ends up
+// stretched and clipped after a resize or an orientation change.
+window.addEventListener('resize', () => {
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+  drops = Array(Math.floor(canvas.width / fontSize)).fill(1);
+});
 
 function drawMatrix() {
   ctx.fillStyle = 'rgba(0,0,0,0.08)';
@@ -643,6 +682,12 @@ function drawMatrix() {
 }
 
 function toggleMatrix() {
+  // The canvas is hidden by the reduced-motion stylesheet, so running the draw
+  // loop would burn CPU on something nobody can see. Say so instead.
+  if (prefersReducedMotion() && !document.body.classList.contains('matrix-mode')) {
+    addToHistory("<div style='color:#e0af68'>Matrix mode is disabled because your system requests reduced motion.</div>");
+    return;
+  }
   document.body.classList.toggle('matrix-mode');
   if (document.body.classList.contains('matrix-mode')) {
     drawMatrix();
@@ -679,44 +724,49 @@ setInterval(() => {
 }, 1000);
 
 // ─── PARTICLES ────────────────────────────────────────────────────────────────
-particlesJS('particles-js', {
-  particles: {
-    number: { value: 80, density: { enable: true, value_area: 800 } },
-    color: { value: '#7dcfff' },
-    shape: { type: 'circle' },
-    opacity: { value: 0.35, random: true, anim: { enable: false } },
-    size: { value: 2, random: true },
-    line_linked: {
-      enable: true,
-      distance: 150,
-      color: '#7dcfff',
-      opacity: 0.2,
-      width: 0.8
+// Guarded: this is decorative, and it used to be a bare top-level call. If the
+// CDN was blocked or slow, the ReferenceError killed every statement below it —
+// including the boot sequence — and the visitor got an empty screen.
+if (typeof particlesJS === 'function' && !prefersReducedMotion()) {
+  particlesJS('particles-js', {
+    particles: {
+      number: { value: 80, density: { enable: true, value_area: 800 } },
+      color: { value: '#7dcfff' },
+      shape: { type: 'circle' },
+      opacity: { value: 0.35, random: true, anim: { enable: false } },
+      size: { value: 2, random: true },
+      line_linked: {
+        enable: true,
+        distance: 150,
+        color: '#7dcfff',
+        opacity: 0.2,
+        width: 0.8
+      },
+      move: {
+        enable: true,
+        speed: 1.2,
+        direction: 'none',
+        random: true,
+        straight: false,
+        out_mode: 'out',
+        bounce: false
+      }
     },
-    move: {
-      enable: true,
-      speed: 1.2,
-      direction: 'none',
-      random: true,
-      straight: false,
-      out_mode: 'out',
-      bounce: false
-    }
-  },
-  interactivity: {
-    detect_on: 'canvas',
-    events: {
-      onhover: { enable: true, mode: 'grab' },
-      onclick: { enable: true, mode: 'push' },
-      resize: true
+    interactivity: {
+      detect_on: 'canvas',
+      events: {
+        onhover: { enable: true, mode: 'grab' },
+        onclick: { enable: true, mode: 'push' },
+        resize: true
+      },
+      modes: {
+        grab: { distance: 180, line_linked: { opacity: 0.9 } },
+        push: { particles_nb: 3 }
+      }
     },
-    modes: {
-      grab: { distance: 180, line_linked: { opacity: 0.9 } },
-      push: { particles_nb: 3 }
-    }
-  },
-  retina_detect: true
-});
+    retina_detect: true
+  });
+}
 
 // ─── EMAIL (EmailJS) ──────────────────────────────────────────────────────────
 function sendEmail(e) {
@@ -753,7 +803,10 @@ navHamburger.addEventListener('click', e => {
 });
 
 navLinksEl.addEventListener('click', e => {
-  if (e.target.tagName === 'A') closeMobileNav();
+  const btn = e.target.closest('button[data-cmd]');
+  if (!btn) return;
+  closeMobileNav();
+  runCommandClick(btn.dataset.cmd);
 });
 
 document.addEventListener('click', e => {

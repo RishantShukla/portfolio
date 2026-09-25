@@ -2,26 +2,31 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://rishant.vercel.app/</loc>
+    <lastmod>2026-09-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://rishant.vercel.app/documents/resume.pdf</loc>
+    <lastmod>2026-09-25</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://rishant.vercel.app/documents/AWS_MultiAccount_SSO_Case_Study.pdf</loc>
+    <lastmod>2026-09-25</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://rishant.vercel.app/documents/ShopfloorGPT_Deployment_Case_Study.pdf</loc>
+    <lastmod>2026-09-25</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://rishant.vercel.app/documents/Kubeadm_to_Kubespray_Migration_Case_Study.pdf</loc>
+    <lastmod>2026-09-25</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>

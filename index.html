@@ -24,6 +24,7 @@
   <meta property="og:title" content="Rishant Shukla | DevOps Engineer" />
   <meta property="og:description" content="DevOps Engineer specializing in Kubernetes, AWS, Terraform, and CI/CD automation. Explore my interactive terminal portfolio." />
   <meta property="og:image" content="https://rishant.vercel.app/assets/og-image.png" />
+  <meta property="og:image:alt" content="Rishant Shukla — DevOps Engineer. Terminal-style portfolio." />
   <meta property="og:locale" content="en_US" />
   <meta property="og:site_name" content="Rishant Shukla — Portfolio" />
 
@@ -32,6 +33,7 @@
   <meta name="twitter:title" content="Rishant Shukla | DevOps Engineer" />
   <meta name="twitter:description" content="DevOps Engineer specializing in Kubernetes, AWS, Terraform, and CI/CD automation. Explore my interactive terminal portfolio." />
   <meta name="twitter:image" content="https://rishant.vercel.app/assets/og-image.png" />
+  <meta name="twitter:image:alt" content="Rishant Shukla — DevOps Engineer. Terminal-style portfolio." />
 
   <!-- Structured Data (Google rich results) -->
   <script type="application/ld+json">
@@ -72,15 +74,44 @@
 </head>
 <body>
 
+  <h1 class="sr-only">Rishant Shukla — DevOps Engineer specializing in Kubernetes, AWS, Terraform and CI/CD automation</h1>
+
+  <noscript>
+    <div class="noscript-fallback">
+      <h2>Rishant Shukla — DevOps Engineer</h2>
+      <p>
+        This portfolio is an interactive terminal and needs JavaScript. Here are the essentials:
+      </p>
+      <ul>
+        <li><strong>Current role:</strong> DevOps Engineer at ResourceDekho IT Services (Dec 2025 – Present)</li>
+        <li><strong>Previously:</strong> DevOps Engineer at Vavensoft Pvt. Ltd. (May 2024 – Dec 2025)</li>
+        <li><strong>Core stack:</strong> Kubernetes (EKS/AKS/ECS), AWS, Terraform, Ansible, Docker, Argo CD, Jenkins, GitHub Actions, Prometheus, Grafana</li>
+        <li><strong>Education:</strong> MCA in Cloud Computing &amp; DevOps, Chandigarh University</li>
+        <li><strong>Location:</strong> Hamirpur, India — open to opportunities</li>
+      </ul>
+      <p>
+        <a href="documents/resume.pdf">Download résumé (PDF)</a> ·
+        <a href="mailto:rishantshukla2002@gmail.com">rishantshukla2002@gmail.com</a> ·
+        <a href="https://github.com/rishantshukla" rel="noopener noreferrer">GitHub</a> ·
+        <a href="https://www.linkedin.com/in/rishantshukla/" rel="noopener noreferrer">LinkedIn</a>
+      </p>
+      <p><strong>Case studies:</strong>
+        <a href="documents/AWS_MultiAccount_SSO_Case_Study.pdf">AWS Multi-Account &amp; SSO</a> ·
+        <a href="documents/ShopfloorGPT_Deployment_Case_Study.pdf">ShopfloorGPT on AKS</a> ·
+        <a href="documents/Kubeadm_to_Kubespray_Migration_Case_Study.pdf">Kubeadm → Kubespray Migration</a>
+      </p>
+    </div>
+  </noscript>
+
   <!-- Particles Background -->
-  <div id="particles-js"></div>
+  <div id="particles-js" aria-hidden="true"></div>
 
   <!-- Matrix Canvas -->
-  <canvas id="matrix-canvas"></canvas>
+  <canvas id="matrix-canvas" aria-hidden="true"></canvas>
 
   <!-- Custom Cursor -->
-  <div id="cursor-dot"></div>
-  <div id="cursor-outline"></div>
+  <div id="cursor-dot" aria-hidden="true"></div>
+  <div id="cursor-outline" aria-hidden="true"></div>
 
   <!-- Full-screen terminal wrapper -->
   <div id="terminal-window">
@@ -100,15 +131,15 @@
     </div>
 
     <!-- Nav Tab Bar -->
-    <nav id="nav-links">
-      <a onclick="runCommandClick('whoami')">👤 About</a>
-      <a onclick="runCommandClick('experience')">💼 Experience</a>
-      <a onclick="runCommandClick('skills')">🛠 Skills</a>
-      <a onclick="runCommandClick('projects')">📦 Projects</a>
-      <a onclick="runCommandClick('certs')">🏅 Certs</a>
-      <a onclick="runCommandClick('education')">🎓 Education</a>
-      <a onclick="runCommandClick('resume')">📄 Resume</a>
-      <a onclick="runCommandClick('contact')">✉️ Contact</a>
+    <nav id="nav-links" aria-label="Portfolio sections">
+      <button type="button" data-cmd="whoami">👤 About</button>
+      <button type="button" data-cmd="experience">💼 Experience</button>
+      <button type="button" data-cmd="skills">🛠 Skills</button>
+      <button type="button" data-cmd="projects">📦 Projects</button>
+      <button type="button" data-cmd="certs">🏅 Certs</button>
+      <button type="button" data-cmd="education">🎓 Education</button>
+      <button type="button" data-cmd="resume">📄 Resume</button>
+      <button type="button" data-cmd="contact">✉️ Contact</button>
     </nav>
 
     <!-- Terminal Body -->
@@ -116,8 +147,8 @@
       <div id="history"></div>
       <div id="real-prompt" class="prompt-line hidden">
         <span class="user">rishant</span><span class="at">@</span><span class="host">devops</span><span class="arrow">➜</span>&nbsp;
-        <span id="input-display"></span><span class="typing-cursor"></span>
-        <input id="command-input" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" />
+        <span id="input-display"></span><span class="typing-cursor" aria-hidden="true"></span>
+        <input id="command-input" type="text" aria-label="Terminal command input. Type help and press Enter to list available commands." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" />
       </div>
     </div>
 
@@ -197,8 +228,8 @@
             &nbsp;· Tech stack: <span class="clickable-cmd" data-cmd="skills">skills</span>
           </div>
           <div style="margin-top:14px;display:flex;gap:14px;">
-            <a href="https://github.com/rishantshukla" target="_blank" class="nf-link"><i class="fab fa-github"></i> GitHub</a>
-            <a href="https://www.linkedin.com/in/rishantshukla/" target="_blank" class="nf-link"><i class="fab fa-linkedin"></i> LinkedIn</a>
+            <a href="https://github.com/rishantshukla" target="_blank" rel="noopener noreferrer" class="nf-link"><i class="fab fa-github"></i> GitHub</a>
+            <a href="https://www.linkedin.com/in/rishantshukla/" target="_blank" rel="noopener noreferrer" class="nf-link"><i class="fab fa-linkedin"></i> LinkedIn</a>
             <a href="mailto:rishantshukla2002@gmail.com" class="nf-link"><i class="fas fa-envelope"></i> Email</a>
           </div>
         </div>
@@ -288,7 +319,7 @@
         <div class="tree-line tree-indent"><span class="tree-pipe">├──</span> <span class="tree-item">Sprinto</span> <span class="tree-item">VPNs</span> <span class="tree-item">IAM</span> <span class="tree-item">Security Hardening</span></div>
         <div class="tree-line"><span class="tree-pipe">├──</span> <span class="tree-cat">💻  Scripting &amp; Version Control</span></div>
         <div class="tree-line tree-indent"><span class="tree-pipe">├──</span> <span class="tree-item">Python</span> <span class="tree-item">Bash</span> <span class="tree-item">PowerShell</span> <span class="tree-item">Git</span> <span class="tree-item">GitHub</span></div>
-        <div class="tree-line"><span class="tree-pipe">├──</span> <span class="tree-cat">�  Linux</span></div>
+        <div class="tree-line"><span class="tree-pipe">├──</span> <span class="tree-cat">🐧  Linux</span></div>
         <div class="tree-line tree-indent"><span class="tree-pipe">├──</span> <span class="tree-item">CentOS</span> <span class="tree-item">Ubuntu</span> <span class="tree-item">RHEL</span> <span class="tree-item">User Mgmt</span> <span class="tree-item">Process Mgmt</span> <span class="tree-item">Disk Mgmt</span></div>
         <div class="tree-line"><span class="tree-pipe">└──</span> <span class="tree-cat">🌐  Web &amp; Databases</span></div>
         <div class="tree-line tree-indent"><span class="tree-pipe">└──</span> <span class="tree-item">HTML</span> <span class="tree-item">CSS</span> <span class="tree-item">Tailwind</span> <span class="tree-item">SQL</span> <span class="tree-item">NoSQL</span> <span class="tree-item">SDLC</span></div>
@@ -301,47 +332,50 @@
       <div style="color:#565f89;margin-bottom:12px;">$ ls -la ~/projects/</div>
       <div class="projects-grid">
 
-        <div class="project-card" onclick="window.open('documents/AWS_MultiAccount_SSO_Case_Study.pdf', '_blank')" title="View Case Study">
+        <a class="project-card" href="documents/AWS_MultiAccount_SSO_Case_Study.pdf" target="_blank" rel="noopener noreferrer">
           <div class="proj-header">
-            <span class="proj-icon">☁️</span>
+            <span class="proj-icon" aria-hidden="true">☁️</span>
             <span class="proj-title">AWS Multi-Account Org &amp; SSO</span>
             <div class="proj-links">
-              <i class="fas fa-file-pdf"></i>
+              <i class="fas fa-file-pdf" aria-hidden="true"></i>
+              <span class="sr-only">(opens case study PDF in a new tab)</span>
             </div>
           </div>
           <div class="proj-desc">Set up AWS multi-account Organization (Dev/UAT/Prod) improving isolation &amp; cost visibility by 40%. Implemented SSO with Entra + IAM Identity Center, cutting manual access management by 80%.</div>
           <div class="proj-tags">
             <span class="ptag">AWS</span><span class="ptag">IAM</span><span class="ptag">SSO</span><span class="ptag">Terraform</span>
           </div>
-        </div>
+        </a>
 
-        <div class="project-card" onclick="window.open('documents/ShopfloorGPT_Deployment_Case_Study.pdf', '_blank')" title="View Case Study">
+        <a class="project-card" href="documents/ShopfloorGPT_Deployment_Case_Study.pdf" target="_blank" rel="noopener noreferrer">
           <div class="proj-header">
-            <span class="proj-icon">🤖</span>
+            <span class="proj-icon" aria-hidden="true">🤖</span>
             <span class="proj-title">ShopfloorGPT on AKS</span>
             <div class="proj-links">
-              <i class="fas fa-file-pdf"></i>
+              <i class="fas fa-file-pdf" aria-hidden="true"></i>
+              <span class="sr-only">(opens case study PDF in a new tab)</span>
             </div>
           </div>
           <div class="proj-desc">Deployed ShopfloorGPT on AKS using Terraform, reducing setup time by 70%. Implemented GitLab CI/CD pipelines cutting manual release effort by 80%. Lowered compute costs by 30%.</div>
           <div class="proj-tags">
             <span class="ptag">Kubernetes</span><span class="ptag">Terraform</span><span class="ptag">GitLab CI</span><span class="ptag">AKS</span>
           </div>
-        </div>
+        </a>
 
-        <div class="project-card" onclick="window.open('documents/Kubeadm_to_Kubespray_Migration_Case_Study.pdf', '_blank')" title="View Case Study">
+        <a class="project-card" href="documents/Kubeadm_to_Kubespray_Migration_Case_Study.pdf" target="_blank" rel="noopener noreferrer">
           <div class="proj-header">
-            <span class="proj-icon">🔄</span>
+            <span class="proj-icon" aria-hidden="true">🔄</span>
             <span class="proj-title">Kubeadm → Kubespray Migration</span>
             <div class="proj-links">
-              <i class="fas fa-file-pdf"></i>
+              <i class="fas fa-file-pdf" aria-hidden="true"></i>
+              <span class="sr-only">(opens case study PDF in a new tab)</span>
             </div>
           </div>
           <div class="proj-desc">Migrated kubeadm-based K8s cluster to Kubespray. Replaced manual shell scripts with Ansible automation, reducing config effort by 70%. Modularized deployment codebase for multi-cluster reuse.</div>
           <div class="proj-tags">
             <span class="ptag">Kubernetes</span><span class="ptag">Kubespray</span><span class="ptag">Ansible</span>
           </div>
-        </div>
+        </a>
 
       </div>
     </div>
@@ -350,42 +384,42 @@
     <div id="tpl-education">
       <div style="color:#565f89;margin-bottom:12px;">$ cat ~/certifications.txt</div>
       <div class="certs-list">
-        <a class="cert-item" href="https://www.credly.com/badges/a978393e-c9ad-4e17-a5c0-4e0b625972fd/public_url" target="_blank">
+        <a class="cert-item" href="https://www.credly.com/badges/a978393e-c9ad-4e17-a5c0-4e0b625972fd/public_url" target="_blank" rel="noopener noreferrer">
           <span class="cert-badge">🏅</span>
           <div>
             <div class="cert-name">Linux - RHCSA</div>
             <div class="cert-meta">Red Hat &nbsp;·&nbsp; Active</div>
           </div>
         </a>
-        <a class="cert-item" href="https://learn.microsoft.com/api/credentials/share/en-us/RishantShukla-2249/2C0C53A617605795?sharingId=85BB5DC558303E07" target="_blank">
+        <a class="cert-item" href="https://learn.microsoft.com/api/credentials/share/en-us/RishantShukla-2249/2C0C53A617605795?sharingId=85BB5DC558303E07" target="_blank" rel="noopener noreferrer">
           <span class="cert-badge">🏅</span>
           <div>
             <div class="cert-name">Microsoft Certified: Azure Fundamentals</div>
             <div class="cert-meta">Microsoft &nbsp;·&nbsp; Active</div>
           </div>
         </a>
-        <a class="cert-item" href="https://www.credly.com/badges/9611c7c5-9a32-44f1-b6ed-f4ddeb1d3901/public_url" target="_blank">
+        <a class="cert-item" href="https://www.credly.com/badges/9611c7c5-9a32-44f1-b6ed-f4ddeb1d3901/public_url" target="_blank" rel="noopener noreferrer">
           <span class="cert-badge">🏅</span>
           <div>
             <div class="cert-name">GitHub Foundations</div>
             <div class="cert-meta">GitHub &nbsp;·&nbsp; Active</div>
           </div>
         </a>
-        <a class="cert-item" href="https://www.credly.com/badges/478527e6-a5ce-4869-9207-7f3e3ed21841/public_url" target="_blank">
+        <a class="cert-item" href="https://www.credly.com/badges/478527e6-a5ce-4869-9207-7f3e3ed21841/public_url" target="_blank" rel="noopener noreferrer">
           <span class="cert-badge">🏅</span>
           <div>
             <div class="cert-name">Python for Data Science</div>
             <div class="cert-meta">IBM &nbsp;·&nbsp; Active</div>
           </div>
         </a>
-        <a class="cert-item" href="https://www.linkedin.com/learning/certificates/a46c13b7b4c033045e80c8cc4d7b17be2e9db8e1becfa77ae463bf64908e336e?trk=share_certificate" target="_blank">
+        <a class="cert-item" href="https://www.linkedin.com/learning/certificates/a46c13b7b4c033045e80c8cc4d7b17be2e9db8e1becfa77ae463bf64908e336e?trk=share_certificate" target="_blank" rel="noopener noreferrer">
           <span class="cert-badge">🏅</span>
           <div>
             <div class="cert-name">DevOps Foundations: CI/CD</div>
             <div class="cert-meta">LinkedIn &nbsp;·&nbsp; Active</div>
           </div>
         </a>
-        <a class="cert-item" href="https://www.coursera.org/account/accomplishments/certificate/VPUQ7YVU3PWG" target="_blank">
+        <a class="cert-item" href="https://www.coursera.org/account/accomplishments/certificate/VPUQ7YVU3PWG" target="_blank" rel="noopener noreferrer">
           <span class="cert-badge">🏅</span>
           <div>
             <div class="cert-name">SQL</div>
@@ -424,19 +458,22 @@
           <div style="color:#7dcfff;margin-bottom:10px;font-weight:bold;">{</div>
           <div class="cj-row"><span class="cj-key">"email"</span><span class="cj-sep">:</span> <a href="mailto:rishantshukla2002@gmail.com" class="cj-val">"rishantshukla2002@gmail.com"</a></div>
           <div class="cj-row"><span class="cj-key">"phone"</span><span class="cj-sep">:</span> <a href="tel:+917018517052" class="cj-val">"+91 7018517052"</a></div>
-          <div class="cj-row"><span class="cj-key">"github"</span><span class="cj-sep">:</span> <a href="https://github.com/rishantshukla" target="_blank" class="cj-val">"github.com/rishantshukla"</a></div>
-          <div class="cj-row"><span class="cj-key">"linkedin"</span><span class="cj-sep">:</span> <a href="https://www.linkedin.com/in/rishantshukla/" target="_blank" class="cj-val">"linkedin.com/in/rishantshukla"</a></div>
+          <div class="cj-row"><span class="cj-key">"github"</span><span class="cj-sep">:</span> <a href="https://github.com/rishantshukla" target="_blank" rel="noopener noreferrer" class="cj-val">"github.com/rishantshukla"</a></div>
+          <div class="cj-row"><span class="cj-key">"linkedin"</span><span class="cj-sep">:</span> <a href="https://www.linkedin.com/in/rishantshukla/" target="_blank" rel="noopener noreferrer" class="cj-val">"linkedin.com/in/rishantshukla"</a></div>
           <div class="cj-row"><span class="cj-key">"location"</span><span class="cj-sep">:</span> <span class="cj-val">"Hamirpur, India 🇮🇳"</span></div>
           <div class="cj-row"><span class="cj-key">"status"</span><span class="cj-sep">:</span> <span class="cj-val" style="color:#9ece6a;">"Open to opportunities"</span></div>
           <div style="color:#7dcfff;margin-top:10px;">}</div>
         </div>
         <form class="contact-form" onsubmit="sendEmail(event)">
           <div style="color:#e0af68;margin-bottom:10px;font-weight:bold;">$ send_message --to rishant</div>
-          <input type="text" name="from_name" placeholder="your_name" required />
-          <input type="email" name="reply_to" placeholder="your_email@domain.com" required />
-          <textarea name="message" placeholder="# your message here..." rows="4" required></textarea>
-          <button type="submit"><i class="fas fa-paper-plane"></i> send_message</button>
-          <div id="email-logs"></div>
+          <label class="sr-only" for="cf-name">Your name</label>
+          <input id="cf-name" type="text" name="from_name" placeholder="your_name" required />
+          <label class="sr-only" for="cf-email">Your email address</label>
+          <input id="cf-email" type="email" name="reply_to" placeholder="your_email@domain.com" required />
+          <label class="sr-only" for="cf-message">Your message</label>
+          <textarea id="cf-message" name="message" placeholder="# your message here..." rows="4" required></textarea>
+          <button type="submit"><i class="fas fa-paper-plane" aria-hidden="true"></i> send_message</button>
+          <div id="email-logs" role="status" aria-live="polite"></div>
         </form>
       </div>
     </div>
@@ -448,7 +485,7 @@
         <div><span class="status-dot">●</span> <span style="color:#9ece6a;font-weight:bold;">rishant.service</span> <span style="color:#a9b1d6;">— DevOps Engineer @ ResourceDekho IT Services</span></div>
         <div class="status-indent">
           <div>Loaded: <span style="color:#a9b1d6;">loaded (/home/rishant/.config/career.conf; enabled)</span></div>
-          <div>Active: <span style="color:#9ece6a;">active (running)</span> <span style="color:#565f89;">since May 2024; open to opportunities</span></div>
+          <div>Active: <span style="color:#9ece6a;">active (running)</span> <span style="color:#565f89;">since Dec 2025; open to opportunities</span></div>
           <div>Status: <span style="color:#e0af68;">"Available for full-time &amp; freelance roles"</span></div>
           <div style="margin-top:8px;">
             <span style="color:#7dcfff;">Location</span>: Remote<br/>
