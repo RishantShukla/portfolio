@@ -20,6 +20,29 @@ function escapeHTML(str) {
   return str.replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]||t));
 }
 
+// ─── CAREER UPTIME ────────────────────────────────────────────────────────────
+// Rendered into the About block's Uptime row. Derived from a date rather than
+// hard-coded, so it cannot go stale the way a written-out "2 years" would.
+const CAREER_START = new Date(2024, 4, 1); // May 2024 — first DevOps role
+
+function careerUptime() {
+  const now = new Date();
+  let months = (now.getFullYear() - CAREER_START.getFullYear()) * 12
+             + (now.getMonth() - CAREER_START.getMonth());
+  if (now.getDate() < CAREER_START.getDate()) months--;
+  if (months < 1) return 'just started';
+  const years = Math.floor(months / 12);
+  const rem   = months % 12;
+  const parts = [];
+  if (years) parts.push(`${years} year${years === 1 ? '' : 's'}`);
+  if (rem)   parts.push(`${rem} month${rem === 1 ? '' : 's'}`);
+  return parts.join(', ');
+}
+
+function fillCareerUptime(root) {
+  root.querySelectorAll('.nf-uptime').forEach(el => { el.textContent = careerUptime(); });
+}
+
 // Clickable commands are <span>/<td>, so they need an explicit role and tab stop
 // to be reachable without a mouse. Applied on injection so it also covers the
 // ones built at runtime, like the "did you mean" suggestion.
@@ -38,6 +61,7 @@ function addToHistory(html) {
   div.style.marginBottom = '20px';
   div.classList.add('fade-in');
   makeClickableCmdsFocusable(div);
+  fillCareerUptime(div);
   history.appendChild(div);
   
   // Add separator line after command output
