@@ -196,6 +196,8 @@
       <div class="help-section-label">— Terminal —</div>
       <table class="help-table">
         <tr><td class="ht-cmd clickable-cmd" data-cmd="ls">ls</td><td class="ht-dash">-</td><td class="ht-desc">List Directory Contents</td></tr>
+        <tr><td class="ht-cmd clickable-cmd" data-cmd="grep kubernetes">grep &lt;term&gt;</td><td class="ht-dash">-</td><td class="ht-desc">Search Everything</td></tr>
+        <tr><td class="ht-cmd clickable-cmd" data-cmd="ls projects">ls projects</td><td class="ht-dash">-</td><td class="ht-desc">List Case Studies</td></tr>
         <tr><td class="ht-cmd clickable-cmd" data-cmd="cd about">cd &lt;dir&gt;</td><td class="ht-dash">-</td><td class="ht-desc">Enter a Directory from ls</td></tr>
         <tr><td class="ht-cmd clickable-cmd" data-cmd="cat readme">cat readme</td><td class="ht-dash">-</td><td class="ht-desc">Read the README</td></tr>
         <tr><td class="ht-cmd clickable-cmd" data-cmd="uptime">uptime</td><td class="ht-dash">-</td><td class="ht-desc">Session Uptime</td></tr>
@@ -357,50 +359,50 @@
       <div style="color:var(--fg-dim);margin-bottom:12px;">$ ls -la ~/projects/</div>
       <div class="projects-grid">
 
-        <a class="project-card" href="documents/AWS_MultiAccount_SSO_Case_Study.pdf" target="_blank" rel="noopener noreferrer">
+        <button type="button" class="project-card clickable-cmd" data-cmd="cat projects/aws-sso.md">
           <div class="proj-header">
             <span class="proj-icon" aria-hidden="true">☁️</span>
             <span class="proj-title">AWS Multi-Account Org &amp; SSO</span>
             <div class="proj-links">
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M10 9H8" /> <path d="M16 13H8" /> <path d="M16 17H8" /></svg>
-              <span class="sr-only">(opens case study PDF in a new tab)</span>
+              <span class="sr-only">(read the case study)</span>
             </div>
           </div>
           <div class="proj-desc">Set up AWS multi-account Organization (Dev/UAT/Prod) improving isolation &amp; cost visibility by 40%. Implemented SSO with Entra + IAM Identity Center, cutting manual access management by 80%.</div>
           <div class="proj-tags">
             <span class="ptag">AWS</span><span class="ptag">IAM</span><span class="ptag">SSO</span><span class="ptag">Terraform</span>
           </div>
-        </a>
+        </button>
 
-        <a class="project-card" href="documents/ShopfloorGPT_Deployment_Case_Study.pdf" target="_blank" rel="noopener noreferrer">
+        <button type="button" class="project-card clickable-cmd" data-cmd="cat projects/shopfloorgpt.md">
           <div class="proj-header">
             <span class="proj-icon" aria-hidden="true">🤖</span>
             <span class="proj-title">ShopfloorGPT on AKS</span>
             <div class="proj-links">
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M10 9H8" /> <path d="M16 13H8" /> <path d="M16 17H8" /></svg>
-              <span class="sr-only">(opens case study PDF in a new tab)</span>
+              <span class="sr-only">(read the case study)</span>
             </div>
           </div>
           <div class="proj-desc">Deployed ShopfloorGPT on AKS using Terraform, reducing setup time by 70%. Implemented GitLab CI/CD pipelines cutting manual release effort by 80%. Lowered compute costs by 30%.</div>
           <div class="proj-tags">
             <span class="ptag">Kubernetes</span><span class="ptag">Terraform</span><span class="ptag">GitLab CI</span><span class="ptag">AKS</span>
           </div>
-        </a>
+        </button>
 
-        <a class="project-card" href="documents/Kubeadm_to_Kubespray_Migration_Case_Study.pdf" target="_blank" rel="noopener noreferrer">
+        <button type="button" class="project-card clickable-cmd" data-cmd="cat projects/kubespray.md">
           <div class="proj-header">
             <span class="proj-icon" aria-hidden="true">🔄</span>
             <span class="proj-title">Kubeadm → Kubespray Migration</span>
             <div class="proj-links">
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M10 9H8" /> <path d="M16 13H8" /> <path d="M16 17H8" /></svg>
-              <span class="sr-only">(opens case study PDF in a new tab)</span>
+              <span class="sr-only">(read the case study)</span>
             </div>
           </div>
           <div class="proj-desc">Migrated kubeadm-based K8s cluster to Kubespray. Replaced manual shell scripts with Ansible automation, reducing config effort by 70%. Modularized deployment codebase for multi-cluster reuse.</div>
           <div class="proj-tags">
             <span class="ptag">Kubernetes</span><span class="ptag">Kubespray</span><span class="ptag">Ansible</span>
           </div>
-        </a>
+        </button>
 
       </div>
     </div>
@@ -521,6 +523,150 @@
             <span style="color:var(--blue);">Response time</span>: &lt; 24 hours
           </div>
         </div>
+      </div>
+    </div>
+
+
+    <!-- CASE STUDY: aws-sso -->
+    <div id="tpl-case-aws-sso">
+      <h2 class="sr-only">Case study: AWS Multi-Account Organization Setup &amp; SSO Implementation</h2>
+      <div class="cs-cmd">$ cat ~/projects/aws-sso.md</div>
+      <div class="cs-title">AWS Multi-Account Organization Setup &amp; SSO Implementation</div>
+      <div class="cs-sub">DevOps &amp; Cloud Engineering Case Study</div>
+
+      <div class="cs-metrics">
+          <div class="cs-metric"><span class="cs-metric-val">40%</span><span class="cs-metric-label">Cost visibility &amp; governance improvement</span></div>
+          <div class="cs-metric"><span class="cs-metric-val">60%</span><span class="cs-metric-label">Reduced operational risk (zero downtime)</span></div>
+          <div class="cs-metric"><span class="cs-metric-val">80%</span><span class="cs-metric-label">Less manual access management</span></div>
+      </div>
+
+      <div class="cs-h">## Overview</div>
+      <div class="cs-body">Designed and implemented a secure, scalable multi-account AWS architecture for an organization operating across Development, UAT and Production environments — replacing a flat, single-account structure with a governed, isolated setup using AWS Organizations.</div>
+
+      <div class="cs-h">## Architecture</div>
+      <pre class="cs-arch">              AWS Organizations (Root)
+                         |
+         IAM Identity Center + Entra ID (SSO)
+                         |
+        +----------------+----------------+
+        |                |                |
+     Dev OU           UAT OU           Prod OU
+   EC2 RDS S3       EC2 RDS S3       EC2 RDS S3</pre>
+
+      <div class="cs-h">## Key Deliverables</div>
+      <ul class="cs-list">
+          <li>Structured AWS Organizations with dedicated OUs for Dev, UAT and Prod, establishing clear account-level isolation and improving cost visibility by 40%.</li>
+          <li>Migrated core workloads — RDS, S3, EC2 — from the root account into their respective OUs with zero downtime, reducing operational risk by 60%.</li>
+          <li>Integrated Microsoft Entra ID with AWS IAM Identity Center for federated SSO across all accounts, cutting manual access provisioning effort by 80% and enforcing consistent RBAC.</li>
+          <li>Established Service Control Policies (SCPs) and account baselines to maintain compliance and prevent configuration drift across environments.</li>
+      </ul>
+
+      <div class="cs-h">## Outcome</div>
+      <div class="cs-body">A production-grade, enterprise-ready AWS landing zone with strong security posture, simplified access management and clear cost/resource accountability across environments — a foundation that scales as the organization adds more accounts or teams.</div>
+
+      <div class="cs-h">## Skills &amp; Tools</div>
+      <div class="proj-tags"><span class="ptag">AWS Organizations</span><span class="ptag">IAM Identity Center</span><span class="ptag">Microsoft Entra ID</span><span class="ptag">IAM</span><span class="ptag">RBAC</span><span class="ptag">EC2</span><span class="ptag">RDS</span><span class="ptag">S3</span><span class="ptag">Service Control Policies</span><span class="ptag">Cloud Migration</span><span class="ptag">Cloud Security</span></div>
+
+      <div class="cs-footer">
+        <a href="documents/AWS_MultiAccount_SSO_Case_Study.pdf" target="_blank" rel="noopener noreferrer" class="cs-pdf">Download the PDF version</a>
+        <span class="cs-sep">·</span>
+        <span class="clickable-cmd" data-cmd="ls projects">back to ls projects</span>
+      </div>
+    </div>
+
+    <!-- CASE STUDY: shopfloorgpt -->
+    <div id="tpl-case-shopfloorgpt">
+      <h2 class="sr-only">Case study: ShopfloorGPT Deployment using Kubernetes, Terraform &amp; GitLab</h2>
+      <div class="cs-cmd">$ cat ~/projects/shopfloorgpt.md</div>
+      <div class="cs-title">ShopfloorGPT Deployment using Kubernetes, Terraform &amp; GitLab</div>
+      <div class="cs-sub">DevOps &amp; Cloud Engineering Case Study</div>
+
+      <div class="cs-metrics">
+          <div class="cs-metric"><span class="cs-metric-val">70%</span><span class="cs-metric-label">Faster infra setup time</span></div>
+          <div class="cs-metric"><span class="cs-metric-val">80%</span><span class="cs-metric-label">Less manual release effort</span></div>
+          <div class="cs-metric"><span class="cs-metric-val">30%</span><span class="cs-metric-label">Lower AKS compute cost</span></div>
+      </div>
+
+      <div class="cs-h">## Overview</div>
+      <div class="cs-body">Deployed ShopfloorGPT on Azure Kubernetes Service (AKS) using Terraform for infrastructure provisioning and GitLab CI/CD for automated builds and releases — turning a manual, ad-hoc deployment process into a fully automated, reproducible pipeline.</div>
+
+      <div class="cs-h">## Architecture</div>
+      <pre class="cs-arch">              GitLab CI/CD Pipeline
+                         |
+            Terraform (Infra Provisioning)
+                         |
+        +----------------+----------------+
+        |                |                |
+   AKS Cluster     ShopfloorGPT       Monitoring
+   Node Pools      App Workload      Cost &amp; Perf
+   Autoscaling       Services        Optimization</pre>
+
+      <div class="cs-h">## Key Deliverables</div>
+      <ul class="cs-list">
+          <li>Deployed ShopfloorGPT on AKS using Terraform, making infrastructure fully reproducible and reducing environment setup time by 70%.</li>
+          <li>Implemented GitLab CI/CD pipelines for automated builds and deployments, cutting manual release effort by 80% and enabling consistent, repeatable releases.</li>
+          <li>Optimized and maintained the AKS cluster on an ongoing basis, improving workload performance while lowering compute costs by 30%.</li>
+          <li>Standardized infrastructure and release workflows into version-controlled Terraform and GitLab pipeline definitions, removing manual, error-prone deployment steps.</li>
+      </ul>
+
+      <div class="cs-h">## Outcome</div>
+      <div class="cs-body">A fully automated, cost-efficient deployment pipeline for ShopfloorGPT — from infrastructure provisioning through to production release — with reproducible environments, faster releases and a leaner, better-optimized AKS footprint.</div>
+
+      <div class="cs-h">## Skills &amp; Tools</div>
+      <div class="proj-tags"><span class="ptag">Kubernetes (AKS)</span><span class="ptag">Terraform</span><span class="ptag">GitLab CI/CD</span><span class="ptag">Azure</span><span class="ptag">Infrastructure as Code</span><span class="ptag">Cloud Cost Optimization</span><span class="ptag">Cluster Management</span><span class="ptag">DevOps Automation</span></div>
+
+      <div class="cs-footer">
+        <a href="documents/ShopfloorGPT_Deployment_Case_Study.pdf" target="_blank" rel="noopener noreferrer" class="cs-pdf">Download the PDF version</a>
+        <span class="cs-sep">·</span>
+        <span class="clickable-cmd" data-cmd="ls projects">back to ls projects</span>
+      </div>
+    </div>
+
+    <!-- CASE STUDY: kubespray -->
+    <div id="tpl-case-kubespray">
+      <h2 class="sr-only">Case study: Kubeadm to Kubespray Migration</h2>
+      <div class="cs-cmd">$ cat ~/projects/kubespray.md</div>
+      <div class="cs-title">Kubeadm to Kubespray Migration</div>
+      <div class="cs-sub">DevOps &amp; Cloud Engineering Case Study</div>
+
+      <div class="cs-metrics">
+          <div class="cs-metric"><span class="cs-metric-val">70%</span><span class="cs-metric-label">Less configuration effort</span></div>
+          <div class="cs-metric"><span class="cs-metric-val">100%</span><span class="cs-metric-label">Automated, repeatable deploys</span></div>
+          <div class="cs-metric"><span class="cs-metric-val">Multi</span><span class="cs-metric-label">Cluster-ready modular roles</span></div>
+      </div>
+
+      <div class="cs-h">## Overview</div>
+      <div class="cs-body">Migrated an existing kubeadm-based Kubernetes cluster to Kubespray, improving cluster reliability, scalability and lifecycle management. Manual shell-script workflows were replaced with Ansible-based automation, standardizing how clusters are provisioned and maintained.</div>
+
+      <div class="cs-h">## Architecture</div>
+      <pre class="cs-arch">             Kubespray Control Node
+                         |
+         Ansible Playbooks + Modular Roles
+                         |
+        +----------------+----------------+
+        |                |                |
+    Cluster A        Cluster B        Cluster C
+     kubeadm          kubeadm          kubeadm
+   -&gt; migrated      -&gt; migrated      -&gt; migrated</pre>
+
+      <div class="cs-h">## Key Deliverables</div>
+      <ul class="cs-list">
+          <li>Migrated the existing kubeadm-based Kubernetes cluster to Kubespray, improving cluster reliability, scalability and long-term lifecycle management.</li>
+          <li>Replaced manual shell-script workflows with Ansible-based automation, reducing configuration effort by 70% and minimizing human error during provisioning and upgrades.</li>
+          <li>Modularized the entire deployment codebase into reusable Ansible roles, making cluster provisioning consistent and easier to manage across multiple clusters.</li>
+          <li>Standardized cluster lifecycle operations (scaling, node add/remove, upgrades) through version-controlled, repeatable playbooks instead of ad-hoc scripts.</li>
+      </ul>
+
+      <div class="cs-h">## Outcome</div>
+      <div class="cs-body">A standardized, version-controlled Kubernetes deployment pipeline that replaces fragile, manual cluster setup with reusable Ansible automation — reducing configuration effort, minimizing human error and making multi-cluster management consistent and repeatable.</div>
+
+      <div class="cs-h">## Skills &amp; Tools</div>
+      <div class="proj-tags"><span class="ptag">Kubernetes</span><span class="ptag">Kubespray</span><span class="ptag">Ansible</span><span class="ptag">kubeadm</span><span class="ptag">Infrastructure as Code</span><span class="ptag">Configuration Management</span><span class="ptag">Linux</span><span class="ptag">Cluster Lifecycle Management</span><span class="ptag">Shell Scripting</span><span class="ptag">CI/CD</span></div>
+
+      <div class="cs-footer">
+        <a href="documents/Kubeadm_to_Kubespray_Migration_Case_Study.pdf" target="_blank" rel="noopener noreferrer" class="cs-pdf">Download the PDF version</a>
+        <span class="cs-sep">·</span>
+        <span class="clickable-cmd" data-cmd="ls projects">back to ls projects</span>
       </div>
     </div>
 

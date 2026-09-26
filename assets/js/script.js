@@ -320,7 +320,7 @@ const availableCommands = [
   'help','about','neofetch','whoami','experience','git log','projects','skills',
   'tree','certs','education','contact','email','status','deploy','ls','resume',
   'clear','m','uptime','ping','history','date','pwd','hostname','echo','cat readme','cat_readme',
-  'linkedin','github','joke','quote','fortune','hack','coffee','theme','sudo','cd'
+  'linkedin','github','joke','quote','fortune','hack','coffee','theme','sudo','cd','grep','ls projects'
 ];
 const commandHistory = [];
 let historyIndex = -1;
@@ -330,13 +330,25 @@ const sessionStart = Date.now();
 // Shows the rest of the matching command in dim text as you type, the way fish
 // does. Tab-completion already existed but nothing advertised it, and command
 // discovery is the weak point of any terminal UI.
+// Bare commands plus the paths they take, so `cat projects/aws-ss` and `cd ex`
+// complete too — previously only single words did.
+function completionCandidates() {
+  const list = [...availableCommands];
+  for (const f of Object.keys(CASE_STUDIES)) list.push(`cat projects/${f}`);
+  for (const f of Object.keys(FILES))        list.push(`cat ${f}`);
+  for (const d of Object.keys(DIRECTORIES))  list.push(`cd ${d}`);
+  for (const t of THEMES)                    list.push(`theme ${t}`);
+  return list;
+}
+
 function updateGhost() {
   const raw = cmdInput.value;
-  const partial = raw.trim().toLowerCase();
+  const lower = raw.toLowerCase();
   let ghost = '';
-  if (partial && raw === raw.trimStart() && !raw.endsWith(' ')) {
-    const match = availableCommands.find(c => c.startsWith(partial) && c !== partial);
-    if (match) ghost = match.slice(partial.length);
+  // slice by the RAW length so a trailing space is handled: "cd " -> "about"
+  if (raw.trim() && raw === raw.trimStart()) {
+    const match = completionCandidates().find(c => c.startsWith(lower) && c !== lower);
+    if (match) ghost = match.slice(raw.length);
   }
   inputGhost.textContent = ghost;
 }
@@ -445,6 +457,93 @@ function trackCommand(cmd, source) {
   } catch (_) { /* analytics must never break the terminal */ }
 }
 
+
+// ─── GREP ─────────────────────────────────────────────────────────────────────
+// Searches every content section. A recruiter's real question is "has he done
+// Argo CD?" — previously that meant reading all six sections.
+const SEARCHABLE = {
+  'about':      'tpl-neofetch',
+  'experience': 'tpl-git-log',
+  'skills':     'tpl-skills',
+  'projects':   'tpl-projects',
+  'certs':      'tpl-education',
+  'education':  'tpl-education2',
+  'status':     'tpl-status',
+  'contact':    'tpl-contact',
+};
+
+// Pull readable lines out of a template: the deepest elements that still hold
+// text, so a bullet or a table row comes back as one line rather than a blob.
+function extractLines(root) {
+  const out = [];
+  const visit = el => {
+    for (const child of el.children) {
+      const text = (child.textContent || '').replace(/\s+/g, ' ').trim();
+      if (!text) continue;
+      const hasTextyChild = [...child.children].some(
+        g => (g.textContent || '').trim().length > 0 &&
+             ['DIV', 'LI', 'TR', 'P', 'UL', 'TABLE', 'TBODY'].includes(g.tagName));
+      if (hasTextyChild) visit(child);
+      else out.push(text);
+    }
+  };
+  visit(root);
+  return out;
+}
+
+function highlightTerm(text, term) {
+  const esc = escapeHTML(text);
+  const needle = escapeHTML(term).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return esc.replace(new RegExp(needle, 'gi'),
+    m => `<span class="grep-hit">${m}</span>`);
+}
+
+function runGrep(rawTerm) {
+  const term = rawTerm.trim();
+  if (!term) {
+    addToHistory(`<div style="color:var(--red);">Usage: grep &lt;term&gt;</div>` +
+      `<div style="color:var(--fg-dim);font-size:12px;margin-top:4px;">// e.g. ` +
+      `<span class="clickable-cmd" data-cmd="grep terraform">grep terraform</span>, ` +
+      `<span class="clickable-cmd" data-cmd="grep kubernetes">grep kubernetes</span></div>`);
+    return;
+  }
+
+  const needle = term.toLowerCase();
+  const hits = [];
+  const seen = new Set();
+  for (const [section, tplId] of Object.entries(SEARCHABLE)) {
+    const tpl = document.getElementById(tplId);
+    if (!tpl) continue;
+    for (const line of extractLines(tpl)) {
+      if (!line.toLowerCase().includes(needle)) continue;
+      const key = section + '|' + line;
+      if (seen.has(key)) continue;       // templates nest, so the same line can surface twice
+      seen.add(key);
+      hits.push([section, line]);
+    }
+  }
+
+  if (!hits.length) {
+    addToHistory(`<div style="color:var(--fg-dim);">grep: no match for ` +
+      `<span style="color:var(--fg);">${escapeHTML(term)}</span></div>`);
+    return;
+  }
+
+  const CAP = 18;
+  const rows = hits.slice(0, CAP).map(([section, line]) => {
+    const clipped = line.length > 150 ? line.slice(0, 150) + '…' : line;
+    return `<div class="grep-row">` +
+      `<span class="grep-file"><span class="clickable-cmd" data-cmd="${section}">${section}/</span></span>` +
+      `<span class="grep-line">${highlightTerm(clipped, term)}</span></div>`;
+  }).join('');
+
+  const more = hits.length > CAP
+    ? `<div class="grep-meta">… and ${hits.length - CAP} more. Narrow the search or open the section directly.</div>`
+    : `<div class="grep-meta">${hits.length} match${hits.length === 1 ? '' : 'es'} — click a section to open it.</div>`;
+
+  addToHistory(rows + more);
+}
+
 // ─── cd ───────────────────────────────────────────────────────────────────────
 // `ls` advertises about/, experience/, projects/ and skills/ as directories, so
 // `cd about` is the obvious next move. Without this it fell through to the fuzzy
@@ -454,6 +553,35 @@ const DIRECTORIES = {
   projects: 'projects', skills: 'skills',
 };
 const FILES = { 'resume.pdf': 'resume', 'contact.json': 'contact' };
+
+// Case studies rendered in the terminal. They were PDF-only, which meant every
+// reader who opened one left the site.
+const CASE_STUDIES = {
+  'aws-sso.md':      { tpl: 'tpl-case-aws-sso',      size: 4096 },
+  'shopfloorgpt.md': { tpl: 'tpl-case-shopfloorgpt', size: 3872 },
+  'kubespray.md':    { tpl: 'tpl-case-kubespray',    size: 3654 },
+};
+
+// accepts aws-sso, aws-sso.md, projects/aws-sso.md, ./projects/aws-sso
+function resolveCaseStudy(arg) {
+  const name = String(arg).trim().toLowerCase()
+    .replace(/^\.?\//, '').replace(/^projects\//, '').replace(/\/+$/, '');
+  if (CASE_STUDIES[name]) return name;
+  if (CASE_STUDIES[name + '.md']) return name + '.md';
+  return null;
+}
+
+function lsProjects() {
+  const rows = Object.entries(CASE_STUDIES).map(([file, meta]) =>
+    `<div class="ls-row"><span class="ls-perm">-rw-r--r--</span>` +
+    `<span class="ls-size">${meta.size}</span>` +
+    `<span class="ls-name"><span class="clickable-cmd" data-cmd="cat projects/${file}">${file}</span></span></div>`
+  ).join('');
+  addToHistory(
+    `<div style="color:var(--fg-dim);margin-bottom:6px;">total ${Object.keys(CASE_STUDIES).length}</div>${rows}` +
+    `<div style="color:var(--fg-dim);font-size:12px;margin-top:10px;">// click a file, or <span class="clickable-cmd" data-cmd="cat projects/aws-sso.md">cat projects/&lt;file&gt;</span></div>`
+  );
+}
 
 function runCd(arg) {
   const target = arg.trim().replace(/\/+$/, '').toLowerCase();
@@ -498,6 +626,10 @@ function processCommand(cmd) {
     case 'ls':
     case 'ls -la':
     case 'ls -l':   addToHistory(document.getElementById('tpl-ls').innerHTML); break;
+    case 'ls projects':
+    case 'ls projects/':
+    case 'ls -la projects':
+    case 'ls -l projects': lsProjects(); break;
     case 'resume':
       addToHistory(`<div style="color:var(--fg)">Opening resume... <a href="./documents/resume.pdf" target="_blank" style="color:var(--blue)">[Download PDF]</a></div>`);
       window.open('./documents/resume.pdf', '_blank');
@@ -738,7 +870,9 @@ function processCommand(cmd) {
     case '': break;
     default: {
       const safeCmd = escapeHTML(cmd);
-      if (cmd === 'cd' || cmd.startsWith('cd ')) {
+      if (cmd === 'grep' || cmd.startsWith('grep ')) {
+        runGrep(cmd.slice(4));
+      } else if (cmd === 'cd' || cmd.startsWith('cd ')) {
         runCd(cmd.slice(2));
       } else if (cmd === 'theme' || cmd.startsWith('theme ')) {
         const want = cmd.slice(5).trim();
@@ -768,7 +902,13 @@ function processCommand(cmd) {
       } else if (cmd.startsWith('cat ')) {
         const file = cmd.slice(4).trim().replace(/^\.\//, '');
         const bare = file.replace(/\/+$/, '');
-        if (file === 'contact.json') {
+        const study = resolveCaseStudy(file);
+        if (study) {
+          addToHistory(document.getElementById(CASE_STUDIES[study].tpl).innerHTML);
+        } else if (bare === 'projects') {
+          addToHistory(`<div style="color:var(--red);">cat: projects: Is a directory</div>` +
+            `<div style="color:var(--fg-dim);font-size:12px;margin-top:4px;">// try <span class="clickable-cmd" data-cmd="ls projects">ls projects</span></div>`);
+        } else if (file === 'contact.json') {
           processCommand('contact');
         } else if (file === 'resume.pdf') {
           addToHistory(
@@ -842,9 +982,11 @@ document.addEventListener('keydown', e => {
 });
 
 document.addEventListener('click', e => {
-  if (e.target.classList.contains('clickable-cmd')) {
-    const cmd = e.target.dataset.cmd || e.target.textContent.trim();
-    runCommandClick(cmd);
+  // closest(), not classList.contains(): e.target is the deepest node clicked,
+  // so on a project card it is the title/description span, not the card itself.
+  const clickable = e.target.closest?.('.clickable-cmd');
+  if (clickable) {
+    runCommandClick(clickable.dataset.cmd || clickable.textContent.trim());
     return;
   }
   // Don't steal focus from form elements or their labels/buttons

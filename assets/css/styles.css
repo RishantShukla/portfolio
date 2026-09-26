@@ -614,6 +614,10 @@ body.matrix-mode #nav-links button:hover { color: #00ff41 !important; background
 }
 .project-card {
   display: block;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  font-size: inherit;
   color: inherit;
   text-decoration: none;
   background: var(--bg3);
@@ -743,6 +747,51 @@ a.cert-item:hover .cert-name { color: var(--blue); }
   white-space: pre;
 }
 
+/* ── CASE STUDIES (rendered in-terminal rather than bouncing to a PDF) ───── */
+.cs-cmd    { color: var(--fg-dim); margin-bottom: 12px; }
+.cs-title  { color: var(--green); font-weight: bold; font-size: 15px; }
+.cs-sub    { color: var(--fg-dim); font-size: 12px; margin-bottom: 14px; }
+.cs-metrics {
+  display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0 18px;
+}
+.cs-metric {
+  flex: 1 1 150px;
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--blue);
+  border-radius: 4px;
+  padding: 8px 12px;
+  background: var(--bg3);
+}
+.cs-metric-val   { display: block; color: var(--blue); font-weight: bold; font-size: 17px; }
+.cs-metric-label { display: block; color: var(--fg-dim); font-size: 11px; margin-top: 2px; line-height: 1.4; }
+.cs-h {
+  color: var(--yellow); font-weight: bold; margin: 18px 0 8px;
+}
+.cs-body   { color: var(--fg); font-size: 13px; line-height: 1.65; }
+.cs-arch {
+  color: var(--blue); background: var(--bg2);
+  border: 1px solid var(--border); border-radius: 4px;
+  padding: 12px 14px; margin: 4px 0 6px;
+  font-family: var(--font); font-size: 12px; line-height: 1.5;
+  overflow-x: auto; white-space: pre;
+}
+.cs-list   { margin: 4px 0 0 18px; }
+.cs-list li { color: var(--fg); font-size: 13px; line-height: 1.6; margin-bottom: 8px; }
+.cs-footer {
+  margin-top: 18px; padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+.cs-pdf { color: var(--blue); }
+.cs-sep { color: var(--fg-dim); margin: 0 8px; }
+
+/* ── GREP RESULTS ────────────────────────────────────────────────────────── */
+.grep-row { display: flex; gap: 10px; margin-bottom: 6px; font-size: 13px; line-height: 1.5; }
+.grep-file { color: var(--purple); flex: none; min-width: 108px; }
+.grep-line { color: var(--fg); }
+.grep-hit  { color: var(--yellow); font-weight: bold; }
+.grep-meta { color: var(--fg-dim); font-size: 12px; margin-top: 10px; }
+
 /* ── SCROLLBAR ────────────────────────────────────────────────────────────── */
 #terminal::-webkit-scrollbar { width: 4px; }
 #terminal::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); }
@@ -758,6 +807,8 @@ a.cert-item:hover .cert-name { color: var(--blue); }
   .neofetch-art { display: none; }
   .motd-grid { grid-template-columns: 1fr; }
   .projects-grid { grid-template-columns: 1fr; }
+  .cs-metrics { flex-direction: column; }
+  .grep-row { flex-direction: column; gap: 2px; }
   #title-bar-center { display: none; }
 
   /* Title bar is tight on phones — keep the badge, drop its label */
