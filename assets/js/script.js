@@ -29,13 +29,29 @@ function applyTheme(name) {
 const LINKABLE = ['about', 'experience', 'skills', 'projects', 'certs',
                   'education', 'contact', 'status', 'resume', 'help'];
 
+// Several sections answer to more than one command — the About nav button runs
+// `whoami`, for instance. Without this the hash silently refuses to update for
+// any alias, leaving a stale URL.
+const CANONICAL = {
+  whoami: 'about', neofetch: 'about',
+  'git log': 'experience',
+  tree: 'skills',
+  email: 'contact',
+};
+
+function canonical(cmd) {
+  return CANONICAL[cmd] || cmd;
+}
+
 function hashCommand() {
   const h = decodeURIComponent((window.location.hash || '').replace(/^#/, ''))
     .trim().toLowerCase();
-  return LINKABLE.includes(h) ? h : null;
+  const c = canonical(h);
+  return LINKABLE.includes(c) ? c : null;
 }
 
-function syncHash(cmd) {
+function syncHash(rawCmd) {
+  const cmd = canonical(rawCmd);
   if (!LINKABLE.includes(cmd)) return;
   // NOTE: `history` is shadowed in this file by the #history element, so the
   // browser API must be reached through window. replaceState (not location.hash)
