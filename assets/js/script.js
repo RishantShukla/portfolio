@@ -7,11 +7,64 @@ let isBooting = true;
 const reduceMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 const prefersReducedMotion = () => reduceMotionQuery.matches;
 
+// ─── THEMES ───────────────────────────────────────────────────────────────────
+// Each name matches a :root[data-theme="..."] block in the stylesheet. The saved
+// theme is applied by an inline script in <head> so there is no flash; this only
+// handles switching at runtime.
+const THEMES = ['tokyo-night', 'dracula', 'gruvbox', 'nord', 'matrix'];
+const THEME_KEY = 'portfolio-theme';
+
+function currentTheme() {
+  return document.documentElement.getAttribute('data-theme') || 'tokyo-night';
+}
+
+function applyTheme(name) {
+  document.documentElement.setAttribute('data-theme', name);
+  try { localStorage.setItem(THEME_KEY, name); } catch { /* private mode */ }
+}
+
+// ─── DEEP LINKS ───────────────────────────────────────────────────────────────
+// #projects etc. so a section can be linked directly — the site was previously
+// one URL with no way to point anyone at anything.
+const LINKABLE = ['about', 'experience', 'skills', 'projects', 'certs',
+                  'education', 'contact', 'status', 'resume', 'help'];
+
+// Several sections answer to more than one command — the About nav button runs
+// `whoami`, for instance. Without this the hash silently refuses to update for
+// any alias, leaving a stale URL.
+const CANONICAL = {
+  whoami: 'about', neofetch: 'about',
+  'git log': 'experience',
+  tree: 'skills',
+  email: 'contact',
+};
+
+function canonical(cmd) {
+  return CANONICAL[cmd] || cmd;
+}
+
+function hashCommand() {
+  const h = decodeURIComponent((window.location.hash || '').replace(/^#/, ''))
+    .trim().toLowerCase();
+  const c = canonical(h);
+  return LINKABLE.includes(c) ? c : null;
+}
+
+function syncHash(rawCmd) {
+  const cmd = canonical(rawCmd);
+  if (!LINKABLE.includes(cmd)) return;
+  // NOTE: `history` is shadowed in this file by the #history element, so the
+  // browser API must be reached through window. replaceState (not location.hash)
+  // keeps the URL shareable without stacking up back-button entries.
+  window.history.replaceState(null, '', '#' + cmd);
+}
+
 const terminalBody = document.getElementById('terminal');
 const history      = document.getElementById('history');
 const realPrompt   = document.getElementById('real-prompt');
 const cmdInput     = document.getElementById('command-input');
 const inputDisplay = document.getElementById('input-display');
+const inputGhost   = document.getElementById('input-ghost');
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 function scrollToBottom() { terminalBody.scrollTop = terminalBody.scrollHeight; }
@@ -63,7 +116,7 @@ function addToHistory(html) {
   
   // Add separator line after command output
   const separator = document.createElement('div');
-  separator.style.borderBottom = '1px solid #292e42';
+  separator.style.borderBottom = '1px solid var(--border)';
   separator.style.margin = '15px 0';
   separator.style.opacity = '0.5';
   history.appendChild(separator);
@@ -150,14 +203,14 @@ async function runDeployPipeline() {
     "[OK]   Infrastructure is up to date.",
     `[INFO] Deploying to Kubernetes (${env})...`,
     "[OK]   Rollout complete. 0 downtime.",
-    `<br><span style='color:#9ece6a'>🚀 Pipeline completed in ${time}.</span>`
+    `<br><span style='color:var(--green)'>🚀 Pipeline completed in ${time}.</span>`
   ];
   for (const step of steps) {
     const div = document.createElement('div');
-    if (step.includes('[OK]'))   div.style.color = '#9ece6a';
-    else if (step.includes('[ERROR]')) div.style.color = '#f7768e';
-    else if (step.includes('[INFO]'))  div.style.color = '#7aa2f7';
-    else div.style.color = '#c0caf5';
+    if (step.includes('[OK]'))   div.style.color = 'var(--green)';
+    else if (step.includes('[ERROR]')) div.style.color = 'var(--red)';
+    else if (step.includes('[INFO]'))  div.style.color = 'var(--blue-alt)';
+    else div.style.color = 'var(--fg-bright)';
     div.innerHTML = step;
     history.appendChild(div);
     scrollToBottom();
@@ -198,11 +251,11 @@ async function runIntro() {
   const sshDiv = document.createElement('div');
   history.appendChild(sshDiv);
   const cLine = document.createElement('div');
-  cLine.style.color = '#e0af68'; cLine.style.marginTop = '10px';
+  cLine.style.color = 'var(--yellow)'; cLine.style.marginTop = '10px';
   sshDiv.appendChild(cLine);
   await typeText(cLine, 'Connecting to rishant-devops...');
   const aLine = document.createElement('div');
-  aLine.style.color = '#e0af68';
+  aLine.style.color = 'var(--yellow)';
   sshDiv.appendChild(aLine);
   await typeText(aLine, 'Authenticating public key "rishant_rsa"...');
 
@@ -213,7 +266,7 @@ async function runIntro() {
   motdDiv.innerHTML = `
     <div style="margin-top:15px;">
       Welcome to <strong>DevOps-Portfolio-OS</strong><br>
-      <span style="color:#565f89;font-size:12px;">${now}</span>
+      <span style="color:var(--fg-dim);font-size:12px;">${now}</span>
     </div>
     <div style="margin:8px 0;display:flex;flex-wrap:wrap;gap:12px;font-size:13px;">
       <span><span class="motd-key">Load:</span> <span class="motd-val">${(Math.random()*0.15+0.01).toFixed(2)}</span></span>
@@ -221,20 +274,34 @@ async function runIntro() {
       <span><span class="motd-key">Processes:</span> <span class="motd-val">${Math.floor(Math.random()*40+110)}</span></span>
       <span><span class="motd-key">IP:</span> <span class="motd-val">10.0.${Math.floor(Math.random()*3)}.${Math.floor(Math.random()*254+1)}</span></span>
     </div>
-    <span style="color:#565f89;font-size:12px;">Last login from <span style="color:#7dcfff;">${ip}</span></span>
-    <hr style="border:0;border-bottom:1px solid #292e42;margin:10px 0 20px;">
+    <span style="color:var(--fg-dim);font-size:12px;">Last login from <span style="color:var(--blue);">${ip}</span></span>
+    <hr style="border:0;border-bottom:1px solid var(--border);margin:10px 0 20px;">
   `;
   history.appendChild(motdDiv);
   scrollToBottom();
 
   await new Promise(r => setTimeout(r, 300));
-  await typeCommand('about');
-  await new Promise(r => setTimeout(r, 120));
-  addToHistory(document.getElementById('tpl-neofetch').innerHTML);
 
-  await typeCommand('help');
-  await new Promise(r => setTimeout(r, 120));
-  addToHistory(document.getElementById('tpl-help').innerHTML);
+  // Arrived via a shared link like /#projects — go straight to what they came
+  // for instead of making them sit through about + help first.
+  const linked = hashCommand();
+  if (linked) {
+    await typeCommand(linked);
+    await new Promise(r => setTimeout(r, 120));
+    processCommand(linked);
+    addToHistory(
+      `<div style="color:var(--fg-dim);font-size:12px;">` +
+      `// type <span class="clickable-cmd" data-cmd="help">help</span> to see everything else.</div>`
+    );
+  } else {
+    await typeCommand('about');
+    await new Promise(r => setTimeout(r, 120));
+    addToHistory(document.getElementById('tpl-neofetch').innerHTML);
+
+    await typeCommand('help');
+    await new Promise(r => setTimeout(r, 120));
+    addToHistory(document.getElementById('tpl-help').innerHTML);
+  }
 
   realPrompt.classList.remove('hidden');
   cmdInput.focus();
@@ -253,22 +320,49 @@ const availableCommands = [
   'help','about','neofetch','whoami','experience','git log','projects','skills',
   'tree','certs','education','contact','email','status','deploy','ls','resume',
   'clear','m','uptime','ping','history','date','pwd','hostname','echo','cat readme','cat_readme',
-  'linkedin','github','joke','quote','fortune','hack','coffee'
+  'linkedin','github','joke','quote','fortune','hack','coffee','theme','sudo'
 ];
 const commandHistory = [];
 let historyIndex = -1;
 const sessionStart = Date.now();
 
-cmdInput.addEventListener('input', function() { inputDisplay.textContent = this.value; });
+// ─── GHOST AUTOCOMPLETE ───────────────────────────────────────────────────────
+// Shows the rest of the matching command in dim text as you type, the way fish
+// does. Tab-completion already existed but nothing advertised it, and command
+// discovery is the weak point of any terminal UI.
+function updateGhost() {
+  const raw = cmdInput.value;
+  const partial = raw.trim().toLowerCase();
+  let ghost = '';
+  if (partial && raw === raw.trimStart() && !raw.endsWith(' ')) {
+    const match = availableCommands.find(c => c.startsWith(partial) && c !== partial);
+    if (match) ghost = match.slice(partial.length);
+  }
+  inputGhost.textContent = ghost;
+}
+
+function acceptGhost() {
+  if (!inputGhost.textContent) return false;
+  cmdInput.value += inputGhost.textContent;
+  inputDisplay.textContent = cmdInput.value;
+  updateGhost();
+  return true;
+}
+
+cmdInput.addEventListener('input', function() {
+  inputDisplay.textContent = this.value;
+  updateGhost();
+});
 
 cmdInput.addEventListener('keydown', function(e) {
   if (e.key === 'Tab') {
     e.preventDefault();
-    const partial = this.value.trim().toLowerCase();
-    if (partial.length > 0) {
-      const match = availableCommands.find(c => c.startsWith(partial) && c !== partial);
-      if (match) { this.value = match; inputDisplay.textContent = match; }
-    }
+    acceptGhost();
+    return;
+  }
+  // Right-arrow at the end of the line accepts the suggestion, like fish
+  if (e.key === 'ArrowRight' && this.selectionStart === this.value.length) {
+    if (acceptGhost()) e.preventDefault();
     return;
   }
   if (e.key === 'l' && e.ctrlKey) { e.preventDefault(); history.innerHTML = ''; return; }
@@ -276,8 +370,8 @@ cmdInput.addEventListener('keydown', function(e) {
     e.preventDefault();
     if (this.value.length > 0) {
       addCommandToHistory(this.value + '^C');
-      addToHistory(`<div style="color:#565f89;">^C</div>`);
-      this.value = ''; inputDisplay.textContent = '';
+      addToHistory(`<div style="color:var(--fg-dim);">^C</div>`);
+      this.value = ''; inputDisplay.textContent = ''; updateGhost();
       scrollToBottom();
     }
     return;
@@ -287,7 +381,7 @@ cmdInput.addEventListener('keydown', function(e) {
     if (commandHistory.length > 0) {
       if (historyIndex < commandHistory.length - 1) historyIndex++;
       this.value = commandHistory[commandHistory.length - 1 - historyIndex];
-      inputDisplay.textContent = this.value;
+      inputDisplay.textContent = this.value; updateGhost();
     }
     return;
   }
@@ -296,13 +390,13 @@ cmdInput.addEventListener('keydown', function(e) {
     if (historyIndex > 0) {
       historyIndex--;
       this.value = commandHistory[commandHistory.length - 1 - historyIndex];
-      inputDisplay.textContent = this.value;
-    } else { historyIndex = -1; this.value = ''; inputDisplay.textContent = ''; }
+      inputDisplay.textContent = this.value; updateGhost();
+    } else { historyIndex = -1; this.value = ''; inputDisplay.textContent = ''; updateGhost(); }
     return;
   }
   if (e.key === 'Enter') {
     const cmd = this.value.trim().toLowerCase();
-    this.value = ''; inputDisplay.textContent = '';
+    this.value = ''; inputDisplay.textContent = ''; updateGhost();
     if (cmd) commandHistory.push(cmd);
     historyIndex = -1;
     addCommandToHistory(cmd);
@@ -351,6 +445,7 @@ function trackCommand(cmd, source) {
 
 // ─── COMMAND PROCESSOR ────────────────────────────────────────────────────────
 function processCommand(cmd) {
+  syncHash(cmd);
   switch (cmd) {
     case 'help':    addToHistory(document.getElementById('tpl-help').innerHTML); break;
     case 'clear':   history.innerHTML = ''; break;
@@ -372,16 +467,16 @@ function processCommand(cmd) {
     case 'ls -la':
     case 'ls -l':   addToHistory(document.getElementById('tpl-ls').innerHTML); break;
     case 'resume':
-      addToHistory(`<div style="color:#a9b1d6">Opening resume... <a href="./documents/resume.pdf" target="_blank" style="color:#7dcfff">[Download PDF]</a></div>`);
+      addToHistory(`<div style="color:var(--fg)">Opening resume... <a href="./documents/resume.pdf" target="_blank" style="color:var(--blue)">[Download PDF]</a></div>`);
       window.open('./documents/resume.pdf', '_blank');
       break;
     case 'm': toggleMatrix(); break;
     case 'linkedin':
-      addToHistory(`<div style="color:#a9b1d6;">Opening LinkedIn profile... <a href="https://www.linkedin.com/in/rishantshukla/" target="_blank" style="color:#7dcfff">[linkedin.com/in/rishantshukla]</a></div>`);
+      addToHistory(`<div style="color:var(--fg);">Opening LinkedIn profile... <a href="https://www.linkedin.com/in/rishantshukla/" target="_blank" style="color:var(--blue)">[linkedin.com/in/rishantshukla]</a></div>`);
       window.open('https://www.linkedin.com/in/rishantshukla/', '_blank');
       break;
     case 'github':
-      addToHistory(`<div style="color:#a9b1d6;">Opening GitHub profile... <a href="https://github.com/rishantshukla" target="_blank" style="color:#7dcfff">[github.com/rishantshukla]</a></div>`);
+      addToHistory(`<div style="color:var(--fg);">Opening GitHub profile... <a href="https://github.com/rishantshukla" target="_blank" style="color:var(--blue)">[github.com/rishantshukla]</a></div>`);
       window.open('https://github.com/rishantshukla', '_blank');
       break;
     case 'joke': {
@@ -408,7 +503,7 @@ function processCommand(cmd) {
         "Why do Python programmers prefer snakes? Because they're good at debugging! 🐍"
       ];
       const joke = jokes[Math.floor(Math.random() * jokes.length)];
-      addToHistory(`<div style="color:#e0af68;">${joke}</div>`);
+      addToHistory(`<div style="color:var(--yellow);">${joke}</div>`);
       break;
     }
     case 'quote': {
@@ -435,7 +530,7 @@ function processCommand(cmd) {
         '"Without requirements or design, programming is the art of adding bugs to an empty text file." — Louis Srygley'
       ];
       const quote = quotes[Math.floor(Math.random() * quotes.length)];
-      addToHistory(`<div style="color:#7dcfff;font-style:italic;">${quote}</div>`);
+      addToHistory(`<div style="color:var(--blue);font-style:italic;">${quote}</div>`);
       break;
     }
     case 'hack': {
@@ -465,42 +560,42 @@ function processCommand(cmd) {
       const db = databases[Math.floor(Math.random() * databases.length)];
       const ending = endings[Math.floor(Math.random() * endings.length)];
       
-      addToHistory(`<div style="color:#9ece6a;">Initializing hacking sequence...</div>`);
+      addToHistory(`<div style="color:var(--green);">Initializing hacking sequence...</div>`);
       setTimeout(() => {
-        addToHistory(`<div style="color:#7dcfff;">Scanning network... [${targetNet}.0/24]</div>`);
+        addToHistory(`<div style="color:var(--blue);">Scanning network... [${targetNet}.0/24]</div>`);
       }, 1000);
       setTimeout(() => {
-        addToHistory(`<div style="color:#7dcfff;">Found target: ${targetNet}.${targetIP}</div>`);
+        addToHistory(`<div style="color:var(--blue);">Found target: ${targetNet}.${targetIP}</div>`);
       }, 2000);
       setTimeout(() => {
-        addToHistory(`<div style="color:#e0af68;">Attempting SSH brute force...</div>`);
+        addToHistory(`<div style="color:var(--yellow);">Attempting SSH brute force...</div>`);
       }, 3000);
       setTimeout(() => {
-        addToHistory(`<div style="color:#565f89;">Trying password: ********... ❌</div>`);
+        addToHistory(`<div style="color:var(--fg-dim);">Trying password: ********... ❌</div>`);
       }, 4000);
       setTimeout(() => {
-        addToHistory(`<div style="color:#565f89;">Trying password: ***********... ❌</div>`);
+        addToHistory(`<div style="color:var(--fg-dim);">Trying password: ***********... ❌</div>`);
       }, 5000);
       setTimeout(() => {
-        addToHistory(`<div style="color:#565f89;">Trying password: ******... ❌</div>`);
+        addToHistory(`<div style="color:var(--fg-dim);">Trying password: ******... ❌</div>`);
       }, 6000);
       setTimeout(() => {
-        addToHistory(`<div style="color:#9ece6a;">Exploiting vulnerability ${cve}-${cveNum}...</div>`);
+        addToHistory(`<div style="color:var(--green);">Exploiting vulnerability ${cve}-${cveNum}...</div>`);
       }, 7000);
       setTimeout(() => {
-        addToHistory(`<div style="color:#9ece6a;">Bypassing firewall... [████████████████████] 100%</div>`);
+        addToHistory(`<div style="color:var(--green);">Bypassing firewall... [████████████████████] 100%</div>`);
       }, 8000);
       setTimeout(() => {
-        addToHistory(`<div style="color:#9ece6a;">Escalating privileges... root access obtained! ✓</div>`);
+        addToHistory(`<div style="color:var(--green);">Escalating privileges... root access obtained! ✓</div>`);
       }, 9000);
       setTimeout(() => {
-        addToHistory(`<div style="color:#9ece6a;">Downloading ${db}... [████████████████████] 100%</div>`);
+        addToHistory(`<div style="color:var(--green);">Downloading ${db}... [████████████████████] 100%</div>`);
       }, 10000);
       setTimeout(() => {
-        addToHistory(`<div style="color:#bb9af7;font-weight:bold;">ACCESS GRANTED - SYSTEM COMPROMISED</div>`);
+        addToHistory(`<div style="color:var(--purple);font-weight:bold;">ACCESS GRANTED - SYSTEM COMPROMISED</div>`);
       }, 11000);
       setTimeout(() => {
-        addToHistory(`<div style="color:#f7768e;font-size:16px;margin-top:10px;">${ending}</div>`);
+        addToHistory(`<div style="color:var(--red);font-size:16px;margin-top:10px;">${ending}</div>`);
         scrollToBottom();
       }, 12000);
       break;
@@ -534,8 +629,8 @@ function processCommand(cmd) {
         "The legacy code you're about to touch was written by someone who no longer works here. Good luck! 👻"
       ];
       const fortune = fortunes[Math.floor(Math.random() * fortunes.length)];
-      addToHistory(`<div style="color:#bb9af7;">
-        <div style="border:1px solid #565f89;padding:12px;border-radius:6px;margin:8px 0;">
+      addToHistory(`<div style="color:var(--purple);">
+        <div style="border:1px solid var(--fg-dim);padding:12px;border-radius:6px;margin:8px 0;">
           ${fortune}
         </div>
       </div>`);
@@ -557,8 +652,8 @@ function processCommand(cmd) {
       const level = caffeineLevel[Math.floor(Math.random() * caffeineLevel.length)];
       const msg = messages[Math.floor(Math.random() * messages.length)];
       
-      addToHistory(`<div style="color:#e0af68;">
-        <pre style="color:#e0af68;line-height:1.2;margin:10px 0;">
+      addToHistory(`<div style="color:var(--yellow);">
+        <pre style="color:var(--yellow);line-height:1.2;margin:10px 0;">
     ( (
      ) )
   ........
@@ -566,7 +661,7 @@ function processCommand(cmd) {
   \\      /
    \`----'
         </pre>
-        <div style="color:#a9b1d6;">☕ ${msg} <span style="color:#565f89;">(${coffee} - Caffeine level: ${level})</span></div>
+        <div style="color:var(--fg);">☕ ${msg} <span style="color:var(--fg-dim);">(${coffee} - Caffeine level: ${level})</span></div>
       </div>`);
       break;
     }
@@ -576,57 +671,78 @@ function processCommand(cmd) {
       const mins = Math.floor((elapsed % 3600) / 60);
       const secs = elapsed % 60;
       const load = `${(Math.random()*0.1+0.01).toFixed(2)}, ${(Math.random()*0.05+0.01).toFixed(2)}, ${(Math.random()*0.03).toFixed(2)}`;
-      addToHistory(`<div style="color:#a9b1d6"> ${new Date().toLocaleTimeString()} up ${hrs}h ${mins}m ${secs}s, 1 user, load average: ${load}</div>`);
+      addToHistory(`<div style="color:var(--fg)"> ${new Date().toLocaleTimeString()} up ${hrs}h ${mins}m ${secs}s, 1 user, load average: ${load}</div>`);
       break;
     }
     case 'date':
-      addToHistory(`<div style="color:#a9b1d6;">${new Date().toString()}</div>`);
+      addToHistory(`<div style="color:var(--fg);">${new Date().toString()}</div>`);
       break;
     case 'pwd':
-      addToHistory(`<div style="color:#a9b1d6;">/home/rishant/portfolio</div>`);
+      addToHistory(`<div style="color:var(--fg);">/home/rishant/portfolio</div>`);
       break;
     case 'hostname':
-      addToHistory(`<div style="color:#a9b1d6;">rishant.vercel.app</div>`);
+      addToHistory(`<div style="color:var(--fg);">rishant.vercel.app</div>`);
       break;
     case 'history': {
       const lines = commandHistory.map((c, i) =>
-        `<div style="color:#a9b1d6;"><span style="color:#565f89;display:inline-block;width:30px;text-align:right;margin-right:10px;">${i+1}</span>${escapeHTML(c)}</div>`
+        `<div style="color:var(--fg);"><span style="color:var(--fg-dim);display:inline-block;width:30px;text-align:right;margin-right:10px;">${i+1}</span>${escapeHTML(c)}</div>`
       ).join('');
-      addToHistory(lines || `<div style="color:#565f89;">No commands in history.</div>`);
+      addToHistory(lines || `<div style="color:var(--fg-dim);">No commands in history.</div>`);
       break;
     }
     case 'cat readme':
     case 'cat readme.md':
     case 'cat_readme':
-      addToHistory(`<div style="color:#a9b1d6;">
-        <span style="color:#e0af68;font-weight:bold;font-size:15px;">📄 README.md</span>
-        <hr style="border:0;border-bottom:1px solid #414868;margin:8px 0;">
-        <span style="color:#7dcfff;font-weight:bold;">Rishant Shukla</span> — DevOps Engineer @ ResourceDekho IT Services<br><br>
+      addToHistory(`<div style="color:var(--fg);">
+        <span style="color:var(--yellow);font-weight:bold;font-size:15px;">📄 README.md</span>
+        <hr style="border:0;border-bottom:1px solid var(--border-soft);margin:8px 0;">
+        <span style="color:var(--blue);font-weight:bold;">Rishant Shukla</span> — DevOps Engineer @ ResourceDekho IT Services<br><br>
         DevOps Engineer with proven experience in building CI/CD pipelines, automating infrastructure,<br>
         and deploying applications on cloud and containerized platforms.<br><br>
         Skilled in Linux, Kubernetes, Docker, and AWS to deliver secure, scalable, and reliable solutions.<br><br>
-        <span style="color:#565f89;">// Built with ❤️ and too much coffee.</span>
+        <span style="color:var(--fg-dim);">// Built with ❤️ and too much coffee.</span>
       </div>`);
       break;
     case '': break;
     default: {
       const safeCmd = escapeHTML(cmd);
-      if (cmd.startsWith('ping ')) {
+      if (cmd === 'theme' || cmd.startsWith('theme ')) {
+        const want = cmd.slice(5).trim();
+        if (!want) {
+          const list = THEMES.map(t => t === currentTheme()
+            ? `<span class="clickable-cmd" data-cmd="theme ${t}" style="color:var(--green);">● ${t}</span> <span style="color:var(--fg-dim);">(current)</span>`
+            : `<span class="clickable-cmd" data-cmd="theme ${t}">○ ${t}</span>`).join('<br>');
+          addToHistory(`<div style="color:var(--fg);">Available themes — click one or type <span class="clickable-cmd" data-cmd="theme dracula">theme &lt;name&gt;</span>:<br><br>${list}</div>`);
+        } else if (THEMES.includes(want)) {
+          applyTheme(want);
+          addToHistory(`<div style="color:var(--green);">Theme set to <b>${escapeHTML(want)}</b>. Saved for next visit.</div>`);
+        } else {
+          addToHistory(`<div style="color:var(--red);">Unknown theme: ${escapeHTML(want)}. Try <span class="clickable-cmd" data-cmd="theme">theme</span> to list them.</div>`);
+        }
+      } else if (cmd === 'sudo' || cmd.startsWith('sudo ')) {
+        const target = cmd.slice(5).trim();
+        const extra = /^(su|-i|-s|bash|sh)$/.test(target)
+          ? `<div style="color:var(--fg-dim);margin-top:6px;">Nice try. 🙃</div>` : '';
+        addToHistory(
+          `<div style="color:var(--red);">[sudo] password for guest: <span style="color:var(--fg-dim);">********</span></div>` +
+          `<div style="color:var(--red);margin-top:4px;">guest is not in the sudoers file. This incident will be reported.</div>` + extra
+        );
+      } else if (cmd.startsWith('ping ')) {
         runPingSimulation(cmd.split(' ')[1]);
       } else if (cmd.startsWith('echo ')) {
-        addToHistory(`<div style="color:#a9b1d6;">${escapeHTML(cmd.substring(5))}</div>`);
+        addToHistory(`<div style="color:var(--fg);">${escapeHTML(cmd.substring(5))}</div>`);
       } else if (cmd.startsWith('cat ')) {
-        addToHistory(`<div style="color:#f7768e;">cat: ${escapeHTML(cmd.split(' ')[1])}: Permission denied</div>`);
+        addToHistory(`<div style="color:var(--red);">cat: ${escapeHTML(cmd.split(' ')[1])}: Permission denied</div>`);
       } else if (cmd.startsWith('docker ') || cmd.startsWith('kubectl ') || cmd.startsWith('terraform ')) {
-        addToHistory(`<div style="color:#f7768e;">Error: Cannot execute '${escapeHTML(cmd.split(' ')[0])}'. Environment not configured.</div>`);
+        addToHistory(`<div style="color:var(--red);">Error: Cannot execute '${escapeHTML(cmd.split(' ')[0])}'. Environment not configured.</div>`);
       } else if (cmd === 'ping') {
-        addToHistory(`<div style="color:#f7768e;">Usage: ping &lt;hostname&gt;</div>`);
+        addToHistory(`<div style="color:var(--red);">Usage: ping &lt;hostname&gt;</div>`);
       } else {
         const suggestion = findClosestCommand(cmd);
         if (suggestion) {
-          addToHistory(`<div style="color:#f7768e;">Command not found: ${safeCmd}. Did you mean <span class="clickable-cmd">${suggestion}</span>?</div>`);
+          addToHistory(`<div style="color:var(--red);">Command not found: ${safeCmd}. Did you mean <span class="clickable-cmd">${suggestion}</span>?</div>`);
         } else {
-          addToHistory(`<div style="color:#f7768e;">Command not found: ${safeCmd}. Type <span class="clickable-cmd">help</span> for available commands.</div>`);
+          addToHistory(`<div style="color:var(--red);">Command not found: ${safeCmd}. Type <span class="clickable-cmd">help</span> for available commands.</div>`);
         }
       }
     }
@@ -637,16 +753,16 @@ function processCommand(cmd) {
 async function runPingSimulation(host) {
   const safeHost = escapeHTML(host);
   const ip = `${Math.floor(Math.random()*223+1)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`;
-  addToHistory(`<div style="color:#a9b1d6;">PING ${safeHost} (${ip}): 56 data bytes</div>`);
+  addToHistory(`<div style="color:var(--fg);">PING ${safeHost} (${ip}): 56 data bytes</div>`);
   for (let i = 0; i < 4; i++) {
     await new Promise(r => setTimeout(r, 700 + Math.random()*400));
     const ttl  = Math.floor(Math.random()*20+48);
     const time = (Math.random()*30+5).toFixed(1);
-    addToHistory(`<div style="color:#a9b1d6;">64 bytes from ${safeHost}: icmp_seq=${i} ttl=${ttl} time=${time} ms</div>`);
+    addToHistory(`<div style="color:var(--fg);">64 bytes from ${safeHost}: icmp_seq=${i} ttl=${ttl} time=${time} ms</div>`);
     scrollToBottom();
   }
   const avg = (Math.random()*15+10).toFixed(1);
-  addToHistory(`<div style="color:#a9b1d6;"><br>--- ${safeHost} ping statistics ---<br>4 packets transmitted, 4 received, <span style="color:#9ece6a;">0% packet loss</span><br>round-trip min/avg/max = ${(avg-5).toFixed(1)}/${avg}/${(parseFloat(avg)+8).toFixed(1)} ms</div>`);
+  addToHistory(`<div style="color:var(--fg);"><br>--- ${safeHost} ping statistics ---<br>4 packets transmitted, 4 received, <span style="color:var(--green);">0% packet loss</span><br>round-trip min/avg/max = ${(avg-5).toFixed(1)}/${avg}/${(parseFloat(avg)+8).toFixed(1)} ms</div>`);
   scrollToBottom();
 }
 
@@ -725,7 +841,7 @@ function toggleMatrix() {
   // The canvas is hidden by the reduced-motion stylesheet, so running the draw
   // loop would burn CPU on something nobody can see. Say so instead.
   if (prefersReducedMotion() && !document.body.classList.contains('matrix-mode')) {
-    addToHistory("<div style='color:#e0af68'>Matrix mode is disabled because your system requests reduced motion.</div>");
+    addToHistory("<div style='color:var(--yellow)'>Matrix mode is disabled because your system requests reduced motion.</div>");
     return;
   }
   document.body.classList.toggle('matrix-mode');
@@ -736,7 +852,7 @@ function toggleMatrix() {
   } else {
     clearInterval(matrixInterval);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    addToHistory("<div style='color:#a9b1d6'>Matrix mode deactivated.</div>");
+    addToHistory("<div style='color:var(--fg)'>Matrix mode deactivated.</div>");
   }
 }
 
@@ -812,7 +928,7 @@ if (typeof particlesJS === 'function' && !prefersReducedMotion()) {
 function sendEmail(e) {
   e.preventDefault();
   const logs = e.target.parentNode.querySelector('#email-logs');
-  logs.innerHTML = "<div style='color:#e0af68'>Sending via SMTP...</div>";
+  logs.innerHTML = "<div style='color:var(--yellow)'>Sending via SMTP...</div>";
   
   // Initialize EmailJS with your Public Key
   emailjs.init('Gj5HXeR87daFYYEqN');
@@ -820,10 +936,10 @@ function sendEmail(e) {
   // Send the form
   emailjs.sendForm('service_204vccd', 'template_1bpb2h4', e.target)
     .then(() => { 
-      logs.innerHTML = "<div style='color:#9ece6a'>[200 OK] Message sent successfully!</div>"; 
+      logs.innerHTML = "<div style='color:var(--green)'>[200 OK] Message sent successfully!</div>"; 
       e.target.reset(); 
     }, (err) => { 
-      logs.innerHTML = `<div style='color:#f7768e'>[ERROR] ${err.text || 'Failed to send message'}</div>`; 
+      logs.innerHTML = `<div style='color:var(--red)'>[ERROR] ${err.text || 'Failed to send message'}</div>`; 
     });
 }
 
@@ -903,6 +1019,14 @@ document.addEventListener('click', e => {
       e.target !== navHamburger) {
     closeMobileNav();
   }
+});
+
+// Someone pastes a different #section into the address bar, or uses back/forward
+// across hashes. replaceState does not fire this, so there is no feedback loop.
+window.addEventListener('hashchange', () => {
+  if (isBooting) return;
+  const cmd = hashCommand();
+  if (cmd) runCommandClick(cmd, 'hash');
 });
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────

@@ -27,7 +27,7 @@
 /* Keyboard focus ring — the site hides the native cursor, so this is the only
    affordance keyboard users get */
 :focus-visible {
-  outline: 2px solid #7dcfff;
+  outline: 2px solid var(--blue);
   outline-offset: 2px;
   border-radius: 3px;
 }
@@ -39,40 +39,82 @@
   max-width: 760px;
   margin: 40px auto;
   padding: 28px;
-  background: #1f2335;
-  border: 1px solid #292e42;
+  background: var(--bg3);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  color: #a9b1d6;
+  color: var(--fg);
   font-family: 'Courier New', Courier, monospace;
   cursor: auto;
 }
-.noscript-fallback h2 { color: #9ece6a; margin-bottom: 12px; }
+.noscript-fallback h2 { color: var(--green); margin-bottom: 12px; }
 .noscript-fallback ul { margin: 12px 0 12px 20px; }
 .noscript-fallback li { margin-bottom: 6px; }
 .noscript-fallback p  { margin: 12px 0; line-height: 1.6; }
-.noscript-fallback a  { color: #7dcfff; }
+.noscript-fallback a  { color: var(--blue); }
 
-:root {
-  --bg:        #1a1b26;
-  --bg2:       #16161e;
-  --bg3:       #1f2335;
-  --bg4:       #24283b;
-  --border:    #292e42;
-  --fg:        #a9b1d6;
-  --fg-dim:    #565f89;
-  --blue:      #7dcfff;
-  --green:     #9ece6a;
-  --red:       #f7768e;
-  --yellow:    #e0af68;
-  --purple:    #bb9af7;
-  --cyan:      #7dcfff;
-  --font:      'Courier New', Courier, monospace;
+/* Tokyo Night — the default. Every other theme below redefines this same set,
+   so anything that uses var() re-themes for free. */
+:root,
+:root[data-theme="tokyo-night"] {
+  --bg:          #1a1b26;
+  --bg2:         #16161e;
+  --bg3:         #1f2335;
+  --bg4:         #24283b;
+  --border:      #292e42;
+  --border-soft: #414868;
+  --fg:          #a9b1d6;
+  --fg-bright:   #c0caf5;
+  --fg-dim:      #565f89;
+  --blue:        #7dcfff;
+  --blue-alt:    #7aa2f7;
+  --green:       #9ece6a;
+  --red:         #f7768e;
+  --yellow:      #e0af68;
+  --purple:      #bb9af7;
+  --cyan:        #7dcfff;
+  --page-bg:     #050508;
+  --font:        'Courier New', Courier, monospace;
+}
+
+:root[data-theme="dracula"] {
+  --bg: #282a36;  --bg2: #21222c;  --bg3: #343746;  --bg4: #424450;
+  --border: #44475a; --border-soft: #6272a4;
+  --fg: #f8f8f2;  --fg-bright: #ffffff; --fg-dim: #6272a4;
+  --blue: #8be9fd; --blue-alt: #bd93f9; --green: #50fa7b;
+  --red: #ff5555;  --yellow: #f1fa8c;   --purple: #bd93f9; --cyan: #8be9fd;
+  --page-bg: #15161d;
+}
+
+:root[data-theme="gruvbox"] {
+  --bg: #282828;  --bg2: #1d2021;  --bg3: #32302f;  --bg4: #3c3836;
+  --border: #504945; --border-soft: #665c54;
+  --fg: #ebdbb2;  --fg-bright: #fbf1c7; --fg-dim: #928374;
+  --blue: #83a598; --blue-alt: #458588; --green: #b8bb26;
+  --red: #fb4934;  --yellow: #fabd2f;   --purple: #d3869b; --cyan: #8ec07c;
+  --page-bg: #141414;
+}
+
+:root[data-theme="nord"] {
+  --bg: #2e3440;  --bg2: #272c36;  --bg3: #3b4252;  --bg4: #434c5e;
+  --border: #4c566a; --border-soft: #5d6b85;
+  --fg: #d8dee9;  --fg-bright: #eceff4; --fg-dim: #7b88a1;
+  --blue: #88c0d0; --blue-alt: #81a1c1; --green: #a3be8c;
+  --red: #bf616a;  --yellow: #ebcb8b;   --purple: #b48ead; --cyan: #88c0d0;
+  --page-bg: #191d24;
+}
+
+:root[data-theme="matrix"] {
+  --bg: #001200;  --bg2: #000a00;  --bg3: #001a00;  --bg4: #002400;
+  --border: #004400; --border-soft: #006600;
+  --fg: #00cc33;  --fg-bright: #7dffa0; --fg-dim: #008822;
+  --blue: #00ff41; --blue-alt: #00dd66; --green: #00ff41;
+  --red: #ff4444;  --yellow: #aaff00;   --purple: #00ffaa; --cyan: #00ffcc;
+  --page-bg: #000000;
 }
 
 html, body {
   height: 100%;
-  /* Deep dark background matching sumitmago.in */
-  background: #050508;
+  background: var(--page-bg);
   color: var(--fg);
   font-family: var(--font);
   font-size: 14px;
@@ -170,11 +212,11 @@ body.matrix-mode #nav-links button:hover { color: #00ff41 !important; background
   border-radius: 10px;
   background: linear-gradient(
     45deg,
-    #89ddff,
-    #3dd5f3,
-    #82aaff,
-    #c792ea,
-    #89ddff
+    var(--blue),
+    var(--cyan),
+    var(--blue-alt),
+    var(--purple),
+    var(--blue)
   );
   background-size: 300% 300%;
   animation: gradientBorder 8s ease infinite;
@@ -222,7 +264,7 @@ body.matrix-mode #nav-links button:hover { color: #00ff41 !important; background
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  color: #7dcfff;
+  color: var(--blue);
   font-size: 12px;
   white-space: nowrap;
   letter-spacing: 0.5px;
@@ -341,7 +383,7 @@ body.matrix-mode #nav-links button:hover { color: #00ff41 !important; background
 #nav-links::-webkit-scrollbar { display: none; }
 #nav-links a,
 #nav-links button {
-  color: #a9b1d6;
+  color: var(--fg);
   text-decoration: none;
   font-size: 12px;
   font-family: inherit;
@@ -354,7 +396,7 @@ body.matrix-mode #nav-links button:hover { color: #00ff41 !important; background
   transition: color 0.15s, background 0.15s;
 }
 #nav-links a:hover,
-#nav-links button:hover { color: #7dcfff; background: var(--bg4); }
+#nav-links button:hover { color: var(--blue); background: var(--bg4); }
 
 /* ── TERMINAL BODY ────────────────────────────────────────────────────────── */
 #terminal {
@@ -382,10 +424,10 @@ body.matrix-mode #nav-links button:hover { color: #00ff41 !important; background
   margin-bottom: 4px;
   line-height: 1.8;
 }
-.user   { color: #9ece6a; }
+.user   { color: var(--green); }
 .at     { color: var(--fg-dim); }
 .host   { color: var(--blue); }
-.arrow  { color: #bb9af7; margin: 0 6px; }
+.arrow  { color: var(--purple); margin: 0 6px; }
 .cmd    { color: var(--fg); }
 
 /* ── HIDDEN INPUT ─────────────────────────────────────────────────────────── */
@@ -593,7 +635,7 @@ body.matrix-mode #nav-links button:hover { color: #00ff41 !important; background
 .proj-links { display: flex; gap: 10px; }
 .proj-links a { color: var(--fg-dim); text-decoration: none; font-size: 14px; transition: color 0.15s; }
 .proj-links a:hover { color: var(--blue); }
-.proj-desc  { color: #a9b1d6; font-size: 12px; line-height: 1.55; margin-bottom: 10px; }
+.proj-desc  { color: var(--fg); font-size: 12px; line-height: 1.55; margin-bottom: 10px; }
 .proj-tags  { display: flex; flex-wrap: wrap; gap: 5px; }
 .ptag {
   background: var(--bg2);
@@ -691,6 +733,15 @@ a.cert-item:hover .cert-name { color: var(--blue); }
   cursor: pointer;
 }
 .clickable-cmd:hover { color: var(--purple); }
+
+/* Inline suggestion shown after the caret while typing (fish-style) */
+#input-ghost {
+  color: var(--fg-dim);
+  opacity: 0.65;
+  pointer-events: none;
+  user-select: none;
+  white-space: pre;
+}
 
 /* ── SCROLLBAR ────────────────────────────────────────────────────────────── */
 #terminal::-webkit-scrollbar { width: 4px; }
