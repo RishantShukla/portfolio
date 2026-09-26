@@ -330,13 +330,25 @@ const sessionStart = Date.now();
 // Shows the rest of the matching command in dim text as you type, the way fish
 // does. Tab-completion already existed but nothing advertised it, and command
 // discovery is the weak point of any terminal UI.
+// Bare commands plus the paths they take, so `cat projects/aws-ss` and `cd ex`
+// complete too — previously only single words did.
+function completionCandidates() {
+  const list = [...availableCommands];
+  for (const f of Object.keys(CASE_STUDIES)) list.push(`cat projects/${f}`);
+  for (const f of Object.keys(FILES))        list.push(`cat ${f}`);
+  for (const d of Object.keys(DIRECTORIES))  list.push(`cd ${d}`);
+  for (const t of THEMES)                    list.push(`theme ${t}`);
+  return list;
+}
+
 function updateGhost() {
   const raw = cmdInput.value;
-  const partial = raw.trim().toLowerCase();
+  const lower = raw.toLowerCase();
   let ghost = '';
-  if (partial && raw === raw.trimStart() && !raw.endsWith(' ')) {
-    const match = availableCommands.find(c => c.startsWith(partial) && c !== partial);
-    if (match) ghost = match.slice(partial.length);
+  // slice by the RAW length so a trailing space is handled: "cd " -> "about"
+  if (raw.trim() && raw === raw.trimStart()) {
+    const match = completionCandidates().find(c => c.startsWith(lower) && c !== lower);
+    if (match) ghost = match.slice(raw.length);
   }
   inputGhost.textContent = ghost;
 }
@@ -970,9 +982,11 @@ document.addEventListener('keydown', e => {
 });
 
 document.addEventListener('click', e => {
-  if (e.target.classList.contains('clickable-cmd')) {
-    const cmd = e.target.dataset.cmd || e.target.textContent.trim();
-    runCommandClick(cmd);
+  // closest(), not classList.contains(): e.target is the deepest node clicked,
+  // so on a project card it is the title/description span, not the card itself.
+  const clickable = e.target.closest?.('.clickable-cmd');
+  if (clickable) {
+    runCommandClick(clickable.dataset.cmd || clickable.textContent.trim());
     return;
   }
   // Don't steal focus from form elements or their labels/buttons
