@@ -395,7 +395,9 @@ cmdInput.addEventListener('keydown', function(e) {
     return;
   }
   if (e.key === 'Enter') {
-    const cmd = this.value.trim().toLowerCase();
+    // collapse repeated spaces — a real shell does not care how many you
+    // typed, and split(' ')[1] used to return empty on a double space
+    const cmd = this.value.trim().toLowerCase().replace(/\s+/g, ' ');
     this.value = ''; inputDisplay.textContent = ''; updateGhost();
     if (cmd) commandHistory.push(cmd);
     historyIndex = -1;
@@ -764,7 +766,21 @@ function processCommand(cmd) {
       } else if (cmd.startsWith('echo ')) {
         addToHistory(`<div style="color:var(--fg);">${escapeHTML(cmd.substring(5))}</div>`);
       } else if (cmd.startsWith('cat ')) {
-        addToHistory(`<div style="color:var(--red);">cat: ${escapeHTML(cmd.split(' ')[1])}: Permission denied</div>`);
+        const file = cmd.slice(4).trim().replace(/^\.\//, '');
+        const bare = file.replace(/\/+$/, '');
+        if (file === 'contact.json') {
+          processCommand('contact');
+        } else if (file === 'resume.pdf') {
+          addToHistory(
+            `<div style="color:var(--yellow);">cat: resume.pdf: binary file</div>` +
+            `<div style="color:var(--fg-dim);font-size:12px;margin-top:4px;">` +
+            `// try <span class="clickable-cmd" data-cmd="resume">resume</span> to open it</div>`
+          );
+        } else if (DIRECTORIES[bare]) {
+          addToHistory(`<div style="color:var(--red);">cat: ${escapeHTML(file)}: Is a directory</div>`);
+        } else {
+          addToHistory(`<div style="color:var(--red);">cat: ${escapeHTML(file)}: No such file or directory</div>`);
+        }
       } else if (cmd.startsWith('docker ') || cmd.startsWith('kubectl ') || cmd.startsWith('terraform ')) {
         addToHistory(`<div style="color:var(--red);">Error: Cannot execute '${escapeHTML(cmd.split(' ')[0])}'. Environment not configured.</div>`);
       } else if (cmd === 'ping') {
