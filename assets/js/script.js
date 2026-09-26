@@ -320,7 +320,7 @@ const availableCommands = [
   'help','about','neofetch','whoami','experience','git log','projects','skills',
   'tree','certs','education','contact','email','status','deploy','ls','resume',
   'clear','m','uptime','ping','history','date','pwd','hostname','echo','cat readme','cat_readme',
-  'linkedin','github','joke','quote','fortune','hack','coffee','theme','sudo'
+  'linkedin','github','joke','quote','fortune','hack','coffee','theme','sudo','cd'
 ];
 const commandHistory = [];
 let historyIndex = -1;
@@ -441,6 +441,36 @@ function trackCommand(cmd, source) {
       data: { command: known ? cmd : '(unrecognized)', source }
     });
   } catch (_) { /* analytics must never break the terminal */ }
+}
+
+// ─── cd ───────────────────────────────────────────────────────────────────────
+// `ls` advertises about/, experience/, projects/ and skills/ as directories, so
+// `cd about` is the obvious next move. Without this it fell through to the fuzzy
+// matcher, which answered "cd ab" with "did you mean clear?".
+const DIRECTORIES = {
+  about: 'about', experience: 'experience',
+  projects: 'projects', skills: 'skills',
+};
+const FILES = { 'resume.pdf': 'resume', 'contact.json': 'contact' };
+
+function runCd(arg) {
+  const target = arg.trim().replace(/\/+$/, '').toLowerCase();
+
+  if (!target || ['~', '/', '..', '-', '.'].includes(target)) {
+    const dirs = Object.keys(DIRECTORIES)
+      .map(d => `<span class="clickable-cmd" data-cmd="cd ${d}">${d}/</span>`).join('  ');
+    addToHistory(
+      `<div style="color:var(--fg);">/home/rishant</div>` +
+      `<div style="color:var(--fg-dim);font-size:12px;margin-top:4px;">// ${dirs}</div>`
+    );
+    return;
+  }
+  if (DIRECTORIES[target]) { processCommand(DIRECTORIES[target]); return; }
+  if (FILES[target]) {
+    addToHistory(`<div style="color:var(--red);">cd: ${escapeHTML(target)}: Not a directory</div>`);
+    return;
+  }
+  addToHistory(`<div style="color:var(--red);">cd: ${escapeHTML(target)}: No such file or directory</div>`);
 }
 
 // ─── COMMAND PROCESSOR ────────────────────────────────────────────────────────
@@ -706,7 +736,9 @@ function processCommand(cmd) {
     case '': break;
     default: {
       const safeCmd = escapeHTML(cmd);
-      if (cmd === 'theme' || cmd.startsWith('theme ')) {
+      if (cmd === 'cd' || cmd.startsWith('cd ')) {
+        runCd(cmd.slice(2));
+      } else if (cmd === 'theme' || cmd.startsWith('theme ')) {
         const want = cmd.slice(5).trim();
         if (!want) {
           const list = THEMES.map(t => t === currentTheme()
@@ -738,7 +770,9 @@ function processCommand(cmd) {
       } else if (cmd === 'ping') {
         addToHistory(`<div style="color:var(--red);">Usage: ping &lt;hostname&gt;</div>`);
       } else {
-        const suggestion = findClosestCommand(cmd);
+        // Edit distance on a multi-word string produces nonsense ("cd ab" once
+        // suggested "clear"), and anything valid with a space is handled above.
+        const suggestion = cmd.includes(' ') ? null : findClosestCommand(cmd);
         if (suggestion) {
           addToHistory(`<div style="color:var(--red);">Command not found: ${safeCmd}. Did you mean <span class="clickable-cmd">${suggestion}</span>?</div>`);
         } else {
