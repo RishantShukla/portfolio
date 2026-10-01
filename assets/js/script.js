@@ -1849,6 +1849,87 @@ if (chatFab && chatPanel) {
     if (returnFocus) chatFab.focus();
   }
 
+  // ── resizing ──────────────────────────────────────────────────────────────
+  // Anchored bottom-right, so it grows up and to the left. Size is kept in
+  // custom properties rather than inline width/height so the phone media query
+  // can ignore it entirely and go back to filling the screen.
+  const CHAT_SIZE_KEY = 'portfolio-ask-size';
+  const CHAT_DEFAULT  = { w: 380, h: 520 };
+  const CHAT_MIN_W = 300, CHAT_MIN_H = 320;
+  let chatSize = { ...CHAT_DEFAULT };
+
+  const chatCanResize = () => window.innerWidth > 600;
+
+  function chatSetSize(w, h) {
+    // ceilings match the CSS max-width/max-height so a drag cannot run past
+    // what is actually rendered and make the pointer drift off the grip
+    const maxW = Math.max(CHAT_MIN_W, window.innerWidth  - 48);
+    const maxH = Math.max(CHAT_MIN_H, window.innerHeight - 140);
+    chatSize = {
+      w: Math.round(Math.min(Math.max(w, CHAT_MIN_W), maxW)),
+      h: Math.round(Math.min(Math.max(h, CHAT_MIN_H), maxH)),
+    };
+    chatPanel.style.setProperty('--chat-w', chatSize.w + 'px');
+    chatPanel.style.setProperty('--chat-h', chatSize.h + 'px');
+    // wide enough for the evidence source column to sit beside the line again
+    chatPanel.classList.toggle('chat-wide', chatSize.w >= 560);
+  }
+
+  function chatSaveSize() {
+    try { localStorage.setItem(CHAT_SIZE_KEY, JSON.stringify(chatSize)); } catch { /* private mode */ }
+  }
+
+  (function chatLoadSize() {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(CHAT_SIZE_KEY) || 'null'); } catch { /* private mode */ }
+    chatSetSize(saved?.w || CHAT_DEFAULT.w, saved?.h || CHAT_DEFAULT.h);
+  })();
+
+  function chatDrag(e, grows) {
+    if (!chatCanResize() || e.button) return;
+    e.preventDefault();
+    const startX = e.clientX, startY = e.clientY;
+    const { w: startW, h: startH } = chatSize;
+    const move = ev => chatSetSize(
+      grows.w ? startW + (startX - ev.clientX) : startW,
+      grows.h ? startH + (startY - ev.clientY) : startH);
+    const stop = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', stop);
+      window.removeEventListener('pointercancel', stop);
+      document.body.classList.remove('chat-resizing');
+      chatSaveSize();
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', stop);
+    window.addEventListener('pointercancel', stop);
+    document.body.classList.add('chat-resizing');
+  }
+
+  const rzCorner = chatPanel.querySelector('.chat-rz-tl');
+  rzCorner.addEventListener('pointerdown', e => chatDrag(e, { w: true, h: true }));
+  chatPanel.querySelector('.chat-rz-l').addEventListener('pointerdown', e => chatDrag(e, { w: true }));
+  chatPanel.querySelector('.chat-rz-t').addEventListener('pointerdown', e => chatDrag(e, { h: true }));
+
+  // A drag-only affordance is unusable without a mouse.
+  rzCorner.addEventListener('keydown', e => {
+    const step = e.shiftKey ? 8 : 24;
+    const delta = { ArrowLeft: [step, 0], ArrowRight: [-step, 0],
+                    ArrowUp: [0, step],   ArrowDown: [0, -step] }[e.key];
+    if (!delta || !chatCanResize()) return;
+    e.preventDefault();
+    chatSetSize(chatSize.w + delta[0], chatSize.h + delta[1]);
+    chatSaveSize();
+  });
+
+  rzCorner.addEventListener('dblclick', () => {
+    chatSetSize(CHAT_DEFAULT.w, CHAT_DEFAULT.h);
+    chatSaveSize();
+  });
+
+  // A size stored on a big monitor must not hang off a small window.
+  window.addEventListener('resize', () => chatSetSize(chatSize.w, chatSize.h));
+
   chatFab.addEventListener('click', () => chatIsOpen() ? chatShut() : chatOpen());
   chatCloseB.addEventListener('click', () => chatShut());
 

@@ -823,6 +823,8 @@ a.cert-item:hover .cert-name { color: var(--blue); }
 }
 /* 380px is too narrow for a source column, and so is a phone */
 #chat-panel .ask-ev { flex-direction: column; gap: 1px; }
+#chat-panel.chat-wide .ask-ev { flex-direction: row; gap: 10px; }
+#chat-panel.chat-wide .ask-ev-src { min-width: 190px; }
 @media (max-width: 600px) { .ask-ev { flex-direction: column; gap: 1px; } }
 @media (prefers-reduced-motion: reduce) { .ask-ev { animation: none; } }
 .ask-src {
@@ -862,8 +864,8 @@ a.cert-item:hover .cert-name { color: var(--blue); }
 
 #chat-panel {
   position: fixed; right: 24px; bottom: 88px;
-  width: 380px; max-width: calc(100vw - 32px);
-  height: 520px; max-height: calc(100vh - 140px); max-height: calc(100dvh - 140px);
+  width: var(--chat-w, 380px);  max-width: calc(100vw - 32px);
+  height: var(--chat-h, 520px); max-height: calc(100vh - 140px); max-height: calc(100dvh - 140px);
   display: flex; flex-direction: column;
   background: var(--bg);
   border: 1px solid var(--border); border-radius: 12px;
@@ -878,7 +880,7 @@ a.cert-item:hover .cert-name { color: var(--blue); }
 
 #chat-head {
   display: flex; align-items: center; gap: 10px;
-  padding: 10px 12px; flex: none;
+  padding: 10px 12px 10px 26px; flex: none;
   background: var(--bg2);
   border-bottom: 1px solid var(--border);
 }
@@ -894,6 +896,26 @@ a.cert-item:hover .cert-name { color: var(--blue); }
   padding: 4px 6px; border-radius: 4px;
 }
 #chat-close:hover { color: var(--red); background: var(--border); }
+
+/* The panel is anchored bottom-right, so it grows from the top-left corner —
+   the opposite of the browser's own `resize`, which is why this is hand-rolled. */
+.chat-rz { position: absolute; z-index: 3; }
+.chat-rz-l { left: 0; top: 0; bottom: 0; width: 6px; cursor: ew-resize; }
+.chat-rz-t { top: 0; left: 0; right: 0; height: 6px; cursor: ns-resize; }
+.chat-rz-tl {
+  top: 0; left: 0; width: 20px; height: 20px;
+  cursor: nwse-resize; background: none; border: 0; padding: 0;
+}
+.chat-rz-tl::before {
+  content: ''; position: absolute; left: 6px; top: 6px;
+  width: 7px; height: 7px; border-radius: 2px 0 0 0;
+  border-left: 2px solid var(--fg-dim); border-top: 2px solid var(--fg-dim);
+  transition: border-color .15s ease;
+}
+.chat-rz-tl:hover::before, .chat-rz-tl:focus-visible::before { border-color: var(--green); }
+.chat-rz-tl:focus-visible { outline: 2px solid var(--green); outline-offset: 1px; }
+body.chat-resizing, body.chat-resizing * { user-select: none; }
+body.chat-resizing #chat-panel { transition: none; }
 
 #chat-log { flex: 1; overflow-y: auto; padding: 14px; position: relative; }
 #chat-log::-webkit-scrollbar { width: 4px; }
@@ -955,6 +977,8 @@ a.cert-item:hover .cert-name { color: var(--blue); }
     width: auto; max-width: none;
     height: auto; top: 12px;
   }
+  .chat-rz { display: none; }
+  #chat-head { padding-left: 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
