@@ -718,15 +718,25 @@ const ASK_ALIASES = {
   college: 'university chandigarh himachal',
 };
 
-function askQueryTerms(q) {
-  const out = [];
+// Grouped by the word the visitor typed. Without this, "does he know kubernetes
+// and rust" answers about Kubernetes and silently implies rust is covered too —
+// the one failure mode that actually matters on a CV. Alias expansions belong to
+// the word that produced them, so a missing expansion is never reported as a
+// missing word.
+function askTermGroups(q) {
+  const groups = [];
   for (const w of askWords(q)) {
     if (ASK_STOPWORDS.has(w)) continue;
-    out.push(askNorm(w));
+    const terms = [askNorm(w)];
     const alias = ASK_ALIASES[w] || ASK_ALIASES[askStem(w)];
-    if (alias) for (const a of alias.split(' ')) out.push(askNorm(a));
+    if (alias) for (const a of alias.split(' ')) terms.push(askNorm(a));
+    groups.push({ word: w, terms: [...new Set(terms)] });
   }
-  return out;
+  return groups;
+}
+
+function askQueryTerms(q) {
+  return askTermGroups(q).flatMap(g => g.terms);
 }
 
 // ─── ASK: INDEX ───────────────────────────────────────────────────────────────
@@ -792,26 +802,48 @@ function askRank(terms) {
   }).sort((a, b) => b.score - a.score);
 }
 
-// The lines actually worth showing: the ones covering the most distinct query
-// terms, preferring a short line that covers three over a long one that covers
-// the same three by being long.
-function askBestLines(doc, terms, limit) {
+// Evidence is gathered across every section rather than from the single best
+// one: "has he used terraform" is answered better by the strongest line from
+// each of four places than by four lines from one. Capped at two per section so
+// nothing monopolises the answer.
+function askEvidence(terms, limit) {
+  const idx = askBuildIndex();
   const want = new Set(terms);
-  return doc.lines.map(line => {
-    const lt = askTokens(line);
-    const hit = new Set(lt.filter(t => want.has(t)));
-    return { line, hit: hit.size, density: hit.size / Math.sqrt(lt.length || 1) };
-  })
-  .filter(x => x.hit > 0)
-  .sort((a, b) => b.hit - a.hit || b.density - a.density)
-  .reduce((keep, x) => {
-    // A case-study title exists twice — as a heading and as its "$ cat" line —
-    // so without this the same sentence is quoted back twice in one answer.
-    if (!keep.some(k => k.line.includes(x.line) || x.line.includes(k.line))) keep.push(x);
-    return keep;
-  }, [])
-  .slice(0, limit)
-  .map(x => x.line);
+  const rows = [];
+
+  for (const doc of idx.docs) {
+    for (const line of doc.lines) {
+      const words = askWords(line);
+      if (!words.length) continue;
+      const hit = new Set(words.filter(w => !ASK_STOPWORDS.has(w)).map(askNorm).filter(t => want.has(t)));
+      if (!hit.size) continue;
+
+      let weight = 0;
+      for (const t of hit) {
+        const n = idx.df[t] || 0;
+        weight += Math.log(1 + (idx.N - n + 0.5) / (n + 0.5));
+      }
+      // A row of tag words has no connective tissue; a sentence does. Used only
+      // as a tiebreak, so "Docker Kubernetes HELM EKS" loses to a line saying
+      // what he did with them — but still wins when nothing else matched.
+      const prose = words.filter(w => ASK_STOPWORDS.has(w)).length / words.length;
+      rows.push({ doc, line, hits: hit.size, weight, prose });
+    }
+  }
+
+  rows.sort((a, b) => b.hits - a.hits || (b.weight + b.prose) - (a.weight + a.prose));
+
+  const picked = [], perDoc = new Map();
+  for (const r of rows) {
+    const n = perDoc.get(r.doc.label) || 0;
+    if (n >= 2) continue;
+    // the same sentence exists as both a heading and a "$ cat" line
+    if (picked.some(k => k.line.includes(r.line) || r.line.includes(k.line))) continue;
+    perDoc.set(r.doc.label, n + 1);
+    picked.push(r);
+    if (picked.length >= limit) break;
+  }
+  return picked;
 }
 
 // ─── ASK: RENDERING ───────────────────────────────────────────────────────────
@@ -839,14 +871,18 @@ function askInto(sink, fn) {
 const askLine = t => `<div class="ask-line">${t}</div>`;
 const askNote = t => `<div class="ask-note">${t}</div>`;
 
-function askQuoted(lines, terms) {
+function askHighlight(text, want) {
+  return escapeHTML(text).replace(/[A-Za-z0-9+#]+/g, w =>
+    want.has(askNorm(w.toLowerCase())) ? `<span class="ask-hit">${w}</span>` : w);
+}
+
+function askEvidenceHTML(rows, terms) {
   const want = new Set(terms);
-  return lines.map(line => {
-    const clipped = line.length > 220 ? line.slice(0, 220) + '…' : line;
-    // highlight the words that earned the match, so the answer shows its working
-    const html = escapeHTML(clipped).replace(/[A-Za-z0-9+#]+/g, w =>
-      want.has(askNorm(w.toLowerCase())) ? `<span class="ask-hit">${w}</span>` : w);
-    return `<div class="ask-quote">${html}</div>`;
+  return rows.map((r, i) => {
+    const clipped = r.line.length > 200 ? r.line.slice(0, 200) + '…' : r.line;
+    return `<div class="ask-ev" style="--i:${i}">` +
+      `<span class="ask-ev-src"><span class="clickable-cmd" data-cmd="${r.doc.cmd}">${r.doc.label}</span></span>` +
+      `<span class="ask-ev-line">${askHighlight(clipped, want)}</span></div>`;
   }).join('');
 }
 
@@ -1006,6 +1042,21 @@ const ASK_EXAMPLES = [
   'has he used terraform?',
 ];
 
+// Drawn on after each answer so the conversation has somewhere to go. Kept
+// wider than ASK_EXAMPLES so the suggestions do not repeat immediately.
+const ASK_SUGGESTIONS = [
+  'does he know kubernetes?',
+  'is he available for work?',
+  'what cloud experience does he have?',
+  'has he used terraform?',
+  'what certifications does he have?',
+  'where is he based?',
+  'what did he build with argo cd?',
+  'how many years of experience?',
+  'what monitoring tools has he used?',
+  'tell me about the kubespray migration',
+];
+
 // Measured over 30 answerable and 15 unanswerable questions, the split is not a
 // gradient: everything answerable scored >= 0.98 and everything unanswerable
 // scored exactly 0.000, because its terms are not in the corpus at all. So the
@@ -1026,6 +1077,12 @@ function askUsage() {
             'quotes back the lines that matched. Try:') + examples, []);
 }
 
+// Shape of the question, not its content: "does he know X" deserves a verdict,
+// "tell me about X" just deserves the evidence.
+const ASK_YESNO = /^(do|does|did|is|are|was|were|has|have|had|can|could|will|would|any|anything|know|knows)\b/;
+
+const askWordList = words => words.map(w => `<b>${escapeHTML(w)}</b>`).join(', ');
+
 function runAsk(rawQuestion) {
   const question = rawQuestion.trim();
   if (!question) { askUsage(); return; }
@@ -1035,37 +1092,55 @@ function runAsk(rawQuestion) {
     if (entry.re.test(normalised)) { entry.run(); return; }
   }
 
-  const terms = askQueryTerms(question);
-  if (!terms.length) { askUsage(); return; }
+  const groups = askTermGroups(question);
+  if (!groups.length) { askUsage(); return; }
 
-  const ranked = askRank(terms);
-  const best = ranked[0];
+  const idx      = askBuildIndex();
+  const inCorpus = g => g.terms.some(t => idx.df[t]);
+  const present  = groups.filter(inCorpus);
+  const missing  = groups.filter(g => !inCorpus(g));
+  const yesNo    = ASK_YESNO.test(normalised);
 
-  if (!best || !best.matched || best.score < ASK_MIN_SCORE) {
-    const near = ranked.filter(r => r.score > 0).slice(0, 3);
+  // Nothing the visitor asked about is written here. Name what was looked for
+  // rather than giving a shrug — "nothing mentions cobol" is an answer.
+  if (!present.length) {
+    const words = askWordList([...new Set(missing.map(g => g.word))]);
     askSay(
-      askLine(`Nothing on this page answers that.`) +
-      (near.length
-        ? askNote('Closest sections: ' + near.map(r =>
-            `<span class="clickable-cmd" data-cmd="${r.doc.cmd}">${r.doc.label}</span>`).join(' · '))
-        : askNote('Try <span class="clickable-cmd" data-cmd="help">help</span> for what is here, or ' +
-                  '<span class="clickable-cmd" data-cmd="contact">contact</span> to ask him directly.')),
+      askLine(yesNo
+        ? `<b class="ask-no">No</b> — nothing on this page mentions ${words}.`
+        : `Nothing on this page mentions ${words}.`) +
+      askNote('Try <span class="clickable-cmd" data-cmd="help">help</span> for what is here, or ' +
+              '<span class="clickable-cmd" data-cmd="contact">contact</span> to ask him directly.'),
       []);
     return;
   }
 
-  const lines = askBestLines(best.doc, terms, 4);
-  // A second section worth offering only if it is genuinely competitive.
-  const second = ranked[1] && ranked[1].score >= best.score * 0.55 ? ranked[1] : null;
-  const sources = [{ label: best.doc.label, cmd: best.doc.cmd }];
-  if (second) sources.push({ label: second.doc.label, cmd: second.doc.cmd });
+  const terms    = present.flatMap(g => g.terms);
+  const hitDocs  = idx.docs.filter(d => terms.some(t => d.tf[t]));
+  const rows     = askEvidence(terms, 4);
+  const n        = hitDocs.length;
+  const where    = `${n} section${n === 1 ? '' : 's'}`;
+
+  let verdict;
+  if (missing.length) {
+    // The honest case: part of the question is answered and part is not.
+    const yes = askWordList([...new Set(present.map(g => g.word))]);
+    const no  = askWordList([...new Set(missing.map(g => g.word))]);
+    verdict = yesNo
+      ? `<b class="ask-yes">Yes</b> for ${yes}, found in ${where}. ` +
+        `<b class="ask-no">Nothing</b> on this page mentions ${no}.`
+      : `${yes} appears in ${where}. <b class="ask-no">Nothing</b> mentions ${no}.`;
+  } else {
+    verdict = yesNo
+      ? `<b class="ask-yes">Yes</b> — found in ${where}:`
+      : `Found in ${where}:`;
+  }
+
+  const sources = [...new Map(rows.map(r => [r.doc.label, { label: r.doc.label, cmd: r.doc.cmd }])).values()];
 
   askSay(
-    (lines.length
-      ? askQuoted(lines, terms)
-      : askLine(`Covered in <span class="clickable-cmd" data-cmd="${best.doc.cmd}">${best.doc.label}</span>.`)) +
-    askNote(`Found in <span class="clickable-cmd" data-cmd="${best.doc.cmd}">${best.doc.label}</span>` +
-            ` — open it for the full section.`),
+    askLine(verdict) +
+    (rows.length ? askEvidenceHTML(rows, terms) : ''),
     sources);
 }
 
@@ -1735,11 +1810,25 @@ if (chatFab && chatPanel) {
         `<button type="button" class="chat-chip">${escapeHTML(q)}</button>`).join(''));
   }
 
+  const chatAsked = new Set();
+
   function chatAsk(question) {
     const q = question.trim();
     if (!q) return;
-    chatAppend('chat-me', escapeHTML(q));
-    askInto(html => chatAppend('chat-bot', html), () => runAsk(q));
+    chatAsked.add(q.toLowerCase());
+    const mine = chatAppend('chat-me', escapeHTML(q));
+    askInto(html => {
+      const next = ASK_SUGGESTIONS.filter(x => !chatAsked.has(x.toLowerCase())).slice(0, 2);
+      const more = next.length
+        ? `<div class="chat-more"><div class="chat-more-label">Try next</div>` +
+          next.map(x => `<button type="button" class="chat-chip">${escapeHTML(x)}</button>`).join('') +
+          `</div>`
+        : '';
+      chatAppend('chat-bot', html + more);
+      // Answers lead with the verdict, so land on the question and read down.
+      // Scrolling to the bottom puts the one line that matters off-screen.
+      chatLog.scrollTop = Math.min(mine.offsetTop - 8, chatLog.scrollHeight);
+    }, () => runAsk(q));
     trackCommand('ask', 'panel');
   }
 
@@ -1783,6 +1872,11 @@ if (chatFab && chatPanel) {
   });
 
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && chatIsOpen()) { e.preventDefault(); chatShut(); }
+    if (e.key === 'Escape' && chatIsOpen()) { e.preventDefault(); chatShut(); return; }
+    // Ctrl/Cmd+K from anywhere, including while typing in the terminal.
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      chatIsOpen() ? chatShut() : chatOpen();
+    }
   });
 }
