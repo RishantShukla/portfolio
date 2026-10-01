@@ -320,6 +320,7 @@ const availableCommands = [
   'help','about','neofetch','whoami','experience','git log','projects','skills',
   'tree','certs','education','contact','email','status','deploy','ls','resume',
   'clear','m','uptime','ping','history','date','pwd','hostname','echo','cat readme','cat_readme',
+  'ask',
   'linkedin','github','joke','quote','fortune','hack','coffee','theme','sudo','cd','grep','ls projects'
 ];
 const commandHistory = [];
@@ -338,6 +339,7 @@ function completionCandidates() {
   for (const f of Object.keys(FILES))        list.push(`cat ${f}`);
   for (const d of Object.keys(DIRECTORIES))  list.push(`cd ${d}`);
   for (const t of THEMES)                    list.push(`theme ${t}`);
+  for (const q of ASK_EXAMPLES)              list.push(`ask ${q}`);
   return list;
 }
 
@@ -446,6 +448,9 @@ function findClosestCommand(input) {
 // NOTE: custom events need a Vercel Pro plan — on Hobby only page views record,
 // and these calls are silently dropped.
 function trackCommand(cmd, source) {
+  // `ask <question>` is bucketed as plain `ask`: how often it is used is worth
+  // knowing, the question itself is a stranger's free text and is not.
+  if (cmd.startsWith('ask ')) cmd = 'ask';
   const known = availableCommands.includes(cmd);
   try {
     window.va('event', {
@@ -474,11 +479,23 @@ const SEARCHABLE = {
 
 // Pull readable lines out of a template: the deepest elements that still hold
 // text, so a bullet or a table row comes back as one line rather than a blob.
+// textContent runs adjacent inline elements together, so a row of tag spans
+// reads as "(AKS)TerraformGitLab CI/CDAzure". Walking the nodes and spacing
+// element boundaries keeps each tag a separate word for both grep and ask.
+function nodeText(el) {
+  let out = '';
+  for (const n of el.childNodes) {
+    if (n.nodeType === Node.TEXT_NODE) out += n.nodeValue;
+    else if (n.nodeType === Node.ELEMENT_NODE) out += ' ' + nodeText(n) + ' ';
+  }
+  return out;
+}
+
 function extractLines(root) {
   const out = [];
   const visit = el => {
     for (const child of el.children) {
-      const text = (child.textContent || '').replace(/\s+/g, ' ').trim();
+      const text = nodeText(child).replace(/\s+/g, ' ').trim();
       if (!text) continue;
       const hasTextyChild = [...child.children].some(
         g => (g.textContent || '').trim().length > 0 &&
@@ -601,6 +618,433 @@ function runCd(arg) {
     return;
   }
   addToHistory(`<div style="color:var(--red);">cd: ${escapeHTML(target)}: No such file or directory</div>`);
+}
+
+// ─── ASK ──────────────────────────────────────────────────────────────────────
+// Answers questions using only what is already written on this page. There is
+// no model and no backend: the eleven content sections are indexed with BM25 at
+// first use, and an answer is the lines that actually matched. Every word it
+// prints is a word that was written here, so it cannot invent a certification
+// or inflate a year — which is the whole point on something that represents a
+// person professionally. When nothing scores well enough it says so.
+
+const ASK_STOPWORDS = new Set((
+  'a about an and any anything are as at be been being by can could d did do does doing ' +
+  'else for from get give got had has have having he her hers him his how i if in into is ' +
+  'it its just like ll lot m many me much my of on once only or other our out over own ' +
+  'please re s so some somebody someone such t tell than that the their them then there ' +
+  'these they this those to told too u up us ve was we were what when where whether which ' +
+  'while who whom why will with would you your yours know knows known ' +
+  // Scaffolding, not content: "any azure WORK?" and "docker EXPERIENCE" were
+  // both answered by about/, which is short enough that BM25's length term
+  // made one incidental "work history" link outrank the actual answer.
+  'work worked working works experience experienced use used using'
+).split(' '));
+
+// Deliberately shallow: the terms that decide an answer are proper nouns
+// (terraform, kubespray, grafana, sprinto) and a greedier stemmer only corrupts
+// them. Three characters or fewer is left alone so aws/eks/ecs/sql survive.
+function askStem(w) {
+  if (w.length <= 3) return w;
+  if (/ies$/.test(w))      return w.slice(0, -3) + 'y';
+  if (/(ing|ed)$/.test(w)) return w.replace(/(ing|ed)$/, '');
+  if (/es$/.test(w))       return w.slice(0, -2);
+  if (/s$/.test(w))        return w.slice(0, -1);
+  return w;
+}
+
+// ci/cd -> "ci cd", node.js -> "node js". + and # survive for c++ / c#.
+function askWords(text) {
+  return String(text).toLowerCase().replace(/[^a-z0-9+#]+/g, ' ').split(' ').filter(Boolean);
+}
+
+// Spellings of one thing. Folded on BOTH sides — query and index — so the "K8s"
+// tag on a project card and the word "Kubernetes" in a sentence become one term.
+// Expanding only the query made the bare tag a rare term of its own, and it
+// outranked every section that spells the word out. A hint that is not a true
+// synonym belongs in ASK_ALIASES, which stays query-side and additive.
+const ASK_SYNONYMS = {
+  k8: 'kubernetes', k8s: 'kubernetes', kube: 'kubernetes', kubectl: 'kubernetes',
+  wfh: 'remote',
+};
+
+function askNorm(w) {
+  return askStem(ASK_SYNONYMS[w] || w);
+}
+
+function askTokens(text) {
+  return askWords(text).filter(t => !ASK_STOPWORDS.has(t)).map(askNorm);
+}
+
+// Nobody asking about container experience types "Docker". Without this map
+// roughly half of real questions miss, because the asker's vocabulary and the
+// page's vocabulary only overlap by accident.
+const ASK_ALIASES = {
+  orchestration: 'kubernetes helm eks aks ecs',
+  container: 'docker kubernetes ecs eks aks helm',
+  containerisation: 'docker kubernetes', containerization: 'docker kubernetes',
+  microservice: 'ecs container docker',
+  iac: 'terraform ansible infrastructure code',
+  infra: 'infrastructure terraform ansible',
+  provisioning: 'terraform ansible provision',
+  config: 'ansible configuration', configuration: 'ansible',
+  cicd: 'ci cd jenkins github action gitlab bitbucket codepipeline pipeline',
+  pipeline: 'jenkins github action gitlab bitbucket codepipeline argo ci cd',
+  automation: 'ansible terraform automate automated',
+  gitops: 'argo gitop',
+  monitoring: 'prometheus grafana loki cloudwatch fluent observability monitor',
+  observability: 'prometheus grafana loki cloudwatch fluent monitoring',
+  logging: 'loki fluent cloudwatch log',
+  alerting: 'prometheus grafana alert',
+  cloud: 'aws azure gcp google',
+  amazon: 'aws', gcp: 'google cloud', aks: 'azure kubernetes',
+  security: 'iam hardening sprinto vpn compliance guardduty waf secure',
+  compliance: 'sprinto guardduty waf iam audit',
+  networking: 'tcp ip dns dhcp subnetting vpn network',
+  scripting: 'python bash powershell script',
+  shell: 'bash script', os: 'linux centos ubuntu rhel',
+  db: 'sql nosql database', database: 'sql nosql',
+  versioning: 'git github version',
+  migration: 'migrate migrated kubespray kubeadm',
+  cluster: 'kubernetes eks aks kubespray',
+  // hiring vocabulary, which maps onto the status section rather than a skill
+  available: 'available opportunity freelance', availability: 'available opportunity freelance',
+  hire: 'available opportunity freelance', hiring: 'available opportunity freelance',
+  relocate: 'remote hybrid location', relocation: 'remote hybrid location',
+  onsite: 'remote hybrid location',
+  certification: 'certification rhcsa azure github foundation ibm coursera',
+  cert: 'certification rhcsa azure github foundation',
+  degree: 'mca bca university education', qualification: 'mca bca university certification',
+  college: 'university chandigarh himachal',
+};
+
+function askQueryTerms(q) {
+  const out = [];
+  for (const w of askWords(q)) {
+    if (ASK_STOPWORDS.has(w)) continue;
+    out.push(askNorm(w));
+    const alias = ASK_ALIASES[w] || ASK_ALIASES[askStem(w)];
+    if (alias) for (const a of alias.split(' ')) out.push(askNorm(a));
+  }
+  return out;
+}
+
+// ─── ASK: INDEX ───────────────────────────────────────────────────────────────
+let askIndex = null;
+
+function askBuildIndex() {
+  if (askIndex) return askIndex;
+  const docs = [];
+  for (const [section, tplId] of Object.entries(SEARCHABLE)) {
+    // The projects grid is a navigation index, not content: every card is a
+    // blurb for a case study that is indexed below in full. Ranking it too made
+    // a short doc of tag words beat the real write-ups, so "does he know
+    // kubernetes" answered with the AWS SSO card. It stays a destination.
+    if (section === 'projects') continue;
+    const tpl = document.getElementById(tplId);
+    if (!tpl) continue;
+    docs.push({ label: section + '/', cmd: section, lines: [...new Set(extractLines(tpl))] });
+  }
+  for (const [file, meta] of Object.entries(CASE_STUDIES)) {
+    const tpl = document.getElementById(meta.tpl);
+    if (!tpl) continue;
+    docs.push({
+      label: 'projects/' + file, cmd: 'cat projects/' + file,
+      lines: [...new Set(extractLines(tpl))],
+    });
+  }
+
+  const df = Object.create(null);
+  let totalLen = 0;
+  for (const d of docs) {
+    const terms = askTokens(d.lines.join(' '));
+    d.len = terms.length;
+    totalLen += d.len;
+    d.tf = Object.create(null);
+    for (const t of terms) d.tf[t] = (d.tf[t] || 0) + 1;
+    for (const t of Object.keys(d.tf)) df[t] = (df[t] || 0) + 1;
+  }
+
+  askIndex = { docs, df, N: docs.length, avgdl: totalLen / (docs.length || 1) };
+  return askIndex;
+}
+
+// Standard BM25. A word in every section (cloud) earns almost nothing; a word in
+// one (kubespray) earns a lot, and the length term stops a long section winning
+// on bulk alone.
+const ASK_K1 = 1.5, ASK_B = 0.75;
+
+function askRank(terms) {
+  const idx = askBuildIndex();
+  return idx.docs.map(doc => {
+    let score = 0;
+    const matched = new Set();
+    for (const t of terms) {
+      const f = doc.tf[t];
+      if (!f) continue;
+      matched.add(t);
+      const n = idx.df[t] || 0;
+      const idf = Math.log(1 + (idx.N - n + 0.5) / (n + 0.5));
+      score += idf * (f * (ASK_K1 + 1)) /
+               (f + ASK_K1 * (1 - ASK_B + ASK_B * doc.len / idx.avgdl));
+    }
+    return { doc, score, matched: matched.size };
+  }).sort((a, b) => b.score - a.score);
+}
+
+// The lines actually worth showing: the ones covering the most distinct query
+// terms, preferring a short line that covers three over a long one that covers
+// the same three by being long.
+function askBestLines(doc, terms, limit) {
+  const want = new Set(terms);
+  return doc.lines.map(line => {
+    const lt = askTokens(line);
+    const hit = new Set(lt.filter(t => want.has(t)));
+    return { line, hit: hit.size, density: hit.size / Math.sqrt(lt.length || 1) };
+  })
+  .filter(x => x.hit > 0)
+  .sort((a, b) => b.hit - a.hit || b.density - a.density)
+  .reduce((keep, x) => {
+    // A case-study title exists twice — as a heading and as its "$ cat" line —
+    // so without this the same sentence is quoted back twice in one answer.
+    if (!keep.some(k => k.line.includes(x.line) || x.line.includes(k.line))) keep.push(x);
+    return keep;
+  }, [])
+  .slice(0, limit)
+  .map(x => x.line);
+}
+
+// ─── ASK: RENDERING ───────────────────────────────────────────────────────────
+function askSources(list) {
+  if (!list || !list.length) return '';
+  const links = list.map(s =>
+    `<span class="clickable-cmd" data-cmd="${s.cmd}">${s.label}</span>`).join(' · ');
+  return `<div class="ask-src">source: ${links}</div>`;
+}
+
+function askSay(bodyHTML, sources) {
+  addToHistory(`<div class="ask-answer">${bodyHTML}${askSources(sources)}</div>`);
+}
+
+const askLine = t => `<div class="ask-line">${t}</div>`;
+const askNote = t => `<div class="ask-note">${t}</div>`;
+
+function askQuoted(lines, terms) {
+  const want = new Set(terms);
+  return lines.map(line => {
+    const clipped = line.length > 220 ? line.slice(0, 220) + '…' : line;
+    // highlight the words that earned the match, so the answer shows its working
+    const html = escapeHTML(clipped).replace(/[A-Za-z0-9+#]+/g, w =>
+      want.has(askNorm(w.toLowerCase())) ? `<span class="ask-hit">${w}</span>` : w);
+    return `<div class="ask-quote">${html}</div>`;
+  }).join('');
+}
+
+// ─── ASK: CURATED ANSWERS ─────────────────────────────────────────────────────
+// Questions where ranked lines would read badly — availability, salary, notice
+// period — and the ones that have no answer on the page at all. Checked before
+// retrieval, so these are the only questions with a written reply.
+const ASK_CONTACT = { label: 'contact/', cmd: 'contact' };
+const ASK_STATUS  = { label: 'status/',  cmd: 'status' };
+
+function askNotOnSite(what) {
+  askSay(
+    askLine(`That isn't written down anywhere on this site — ${what}`) +
+    askNote(`Ask him directly: <span class="clickable-cmd" data-cmd="contact">contact</span> ` +
+            `(he replies in under 24 hours).`),
+    [ASK_CONTACT]);
+}
+
+const ASK_FAQ = [
+  { // deliberately before the location rule, which also matches "remote"
+    re: /\b(salary|ctc|compensation|package|stipend|pay scale|day rate|charge|expected pay|how much (do|does|would))\b/,
+    run: () => askNotOnSite('he does not list rates or salary expectations publicly.'),
+  },
+  {
+    re: /\b(visa|work permit|sponsor|sponsorship|citizen|passport|right to work)\b/,
+    run: () => askNotOnSite('work authorisation is not covered here.'),
+  },
+  {
+    re: /\b(age|how old|date of birth|dob|married|marital|religion|caste|gender|photo)\b/,
+    run: () => askSay(
+      askLine('This site only covers his professional background.') +
+      askNote('Try <span class="clickable-cmd" data-cmd="experience">experience</span>, ' +
+              '<span class="clickable-cmd" data-cmd="skills">skills</span> or ' +
+              '<span class="clickable-cmd" data-cmd="certs">certs</span>.'), []),
+  },
+  {
+    re: /\b(notice period|when can (he|you) (start|join)|start date|joining date|how soon)\b/,
+    run: () => askSay(
+      askLine('Open to opportunities and currently available — full-time and freelance.') +
+      askNote('A specific start date is not listed; ask him directly via ' +
+              '<span class="clickable-cmd" data-cmd="contact">contact</span>.'),
+      [ASK_STATUS, ASK_CONTACT]),
+  },
+  {
+    re: /\b(available|availability|open to work|open to opportunit|looking for (a )?(job|role|work)|is he free|hiring|can i hire)\b/,
+    run: () => askSay(
+      askLine('<b>Open to opportunities</b> — available for full-time &amp; freelance roles.') +
+      askLine('Works Remote · Hybrid. Response time: under 24 hours.'),
+      [ASK_STATUS, ASK_CONTACT]),
+  },
+  {
+    re: /\b(freelanc|contract work|part.?time|consult|side project|moonlight)\b/,
+    run: () => askSay(
+      askLine('Yes — the availability section lists <b>full-time &amp; freelance</b> roles.'),
+      [ASK_STATUS, ASK_CONTACT]),
+  },
+  {
+    re: /\b(how many years|years of experience|total experience|how long has|how long have|experience level|yrs|seniority|junior or senior)\b/,
+    run: () => askSay(
+      askLine(`<b>${careerExperience()}</b> — career started May 2024.`) +
+      askLine('Currently DevOps Engineer at ResourceDekho IT Services (Remote) since Dec 2025.'),
+      [{ label: 'about/', cmd: 'about' }, { label: 'experience/', cmd: 'experience' }]),
+  },
+  {
+    re: /\b(where (is|are|does|do) (he|you|rishant)|where.{0,12}(based|located|live)|location|based in|relocat|willing to move|remote|hybrid|onsite|on.site|wfh|which (city|country))\b/,
+    run: () => askSay(
+      askLine('Hamirpur, India 🇮🇳 — works <b>Remote · Hybrid</b>.') +
+      askLine('His current role at ResourceDekho IT Services is remote.'),
+      [ASK_STATUS, { label: 'about/', cmd: 'about' }]),
+  },
+  {
+    re: /\b(contact|reach (him|you|out)|get in touch|email|e.?mail|phone|mobile|call him|whatsapp|connect)\b/,
+    run: () => askSay(
+      askLine('Email: <b>rishantshukla2002@gmail.com</b> · Phone: <b>+91 7018517052</b>') +
+      askNote('Open <span class="clickable-cmd" data-cmd="contact">contact</span> for the form, ' +
+              'GitHub and LinkedIn.'),
+      [ASK_CONTACT]),
+  },
+  {
+    re: /\b(education|degree|qualification|college|university|studied|graduat|mca|bca|cgpa|academic|school)\b/,
+    run: () => askSay(
+      askLine('🎓 <b>MCA</b> — Cloud Computing &amp; DevOps, Chandigarh University · CGPA 7.70 · 2022–2024') +
+      askLine('🎓 <b>BCA</b> — Himachal Pradesh University · CGPA 8.50 · 2019–2022'),
+      [{ label: 'education/', cmd: 'education' }]),
+  },
+  {
+    re: /\b(certif|rhcsa|credential|badge|accredit)\b/,
+    run: () => askSay(
+      askLine('🏅 RHCSA (Red Hat) · Azure Fundamentals (Microsoft) · GitHub Foundations') +
+      askLine('🏅 Python for Data Science (IBM) · DevOps Foundations: CI/CD (LinkedIn) · SQL (Coursera)') +
+      askNote('All active. <span class="clickable-cmd" data-cmd="certs">certs</span> has the verification links.'),
+      [{ label: 'certs/', cmd: 'certs' }]),
+  },
+  {
+    re: /\b(resume|cv|download.{0,10}(pdf|file))\b/,
+    run: () => askSay(
+      askLine('The full PDF résumé is one command away.') +
+      askNote('<span class="clickable-cmd" data-cmd="resume">resume</span> opens it.'), []),
+  },
+  {
+    re: /\b(current (company|employer|role|job)|who does he work for|where does he work now|present employer)\b/,
+    run: () => askSay(
+      askLine('<b>DevOps Engineer</b> at ResourceDekho IT Services (Remote), Dec 2025 – Present.'),
+      [{ label: 'experience/', cmd: 'experience' }]),
+  },
+  {
+    re: /\b(why (should|would).{0,20}hire|why him|why you|strength|good fit|stand out|best at|sell yourself)\b/,
+    run: () => askSay(
+      askLine('Short version: he automates infrastructure end to end — Terraform and Ansible for ' +
+              'provisioning, Argo CD for GitOps delivery, EKS/ECS for runtime, and Prometheus/Grafana ' +
+              'for what happens next.') +
+      askNote('The receipts: <span class="clickable-cmd" data-cmd="experience">experience</span> · ' +
+              '<span class="clickable-cmd" data-cmd="ls projects">ls projects</span> · ' +
+              '<span class="clickable-cmd" data-cmd="certs">certs</span>'),
+      [{ label: 'about/', cmd: 'about' }]),
+  },
+  {
+    re: /^(what('s| is| are)? ?(his|the|your)? ?)?(tech ?stack|skill ?set|skills|technologies|tools|stack)\s*\??$/,
+    run: () => { processCommand('skills'); },
+  },
+  {
+    re: /^(what('s| is| are)? ?(his|the|your)? ?)?(projects?|case ?stud(y|ies)|portfolio work)\s*\??$/,
+    run: () => { lsProjects(); },
+  },
+  {
+    re: /\b(who is (he|rishant|you)|who are you|introduce|tell me about (him|rishant|yourself)|about (him|rishant)|his background|summary)\b/,
+    run: () => askSay(
+      askLine('<b>Rishant Shukla</b> — DevOps Engineer at ResourceDekho IT Services, working remotely ' +
+              'from Hamirpur, India.') +
+      askLine('Focus: Cloud Infrastructure · Kubernetes · IaC · Automation.') +
+      askNote('<span class="clickable-cmd" data-cmd="about">about</span> has the full card.'),
+      [{ label: 'about/', cmd: 'about' }]),
+  },
+  {
+    re: /\b(what can i ask|what commands|list commands|how do i use|what is this site|help me)\b/,
+    run: () => { processCommand('help'); },
+  },
+];
+
+// ─── ASK: ENTRY POINT ─────────────────────────────────────────────────────────
+const ASK_EXAMPLES = [
+  'does he know kubernetes?',
+  'is he available for work?',
+  'what cloud experience does he have?',
+  'has he used terraform?',
+];
+
+// Measured over 30 answerable and 15 unanswerable questions, the split is not a
+// gradient: everything answerable scored >= 0.98 and everything unanswerable
+// scored exactly 0.000, because its terms are not in the corpus at all. So the
+// real signal is "did any query term match anything", not a score cutoff — an
+// absolute BM25 score is not comparable across queries on eleven documents. The
+// floor below is only a guard; `matched` is what decides. (A tuned 1.2 cutoff
+// rejected "microservices" at 1.199 and, once K8s folded into the index and
+// dropped kubernetes' IDF, "does he know kubernetes" as well.)
+const ASK_MIN_SCORE = 0.3;
+
+function askUsage() {
+  const examples = ASK_EXAMPLES
+    .map(q => `<div class="ask-eg"><span class="clickable-cmd" data-cmd="ask ${q}">ask ${q}</span></div>`)
+    .join('');
+  askSay(
+    askLine('Ask a question about his work in plain English.') +
+    askNote('No AI and no server — it searches what is written on this page and ' +
+            'quotes back the lines that matched. Try:') + examples, []);
+}
+
+function runAsk(rawQuestion) {
+  const question = rawQuestion.trim();
+  if (!question) { askUsage(); return; }
+
+  const normalised = question.toLowerCase().replace(/\s+/g, ' ');
+  for (const entry of ASK_FAQ) {
+    if (entry.re.test(normalised)) { entry.run(); return; }
+  }
+
+  const terms = askQueryTerms(question);
+  if (!terms.length) { askUsage(); return; }
+
+  const ranked = askRank(terms);
+  const best = ranked[0];
+
+  if (!best || !best.matched || best.score < ASK_MIN_SCORE) {
+    const near = ranked.filter(r => r.score > 0).slice(0, 3);
+    askSay(
+      askLine(`Nothing on this page answers that.`) +
+      (near.length
+        ? askNote('Closest sections: ' + near.map(r =>
+            `<span class="clickable-cmd" data-cmd="${r.doc.cmd}">${r.doc.label}</span>`).join(' · '))
+        : askNote('Try <span class="clickable-cmd" data-cmd="help">help</span> for what is here, or ' +
+                  '<span class="clickable-cmd" data-cmd="contact">contact</span> to ask him directly.')),
+      []);
+    return;
+  }
+
+  const lines = askBestLines(best.doc, terms, 4);
+  // A second section worth offering only if it is genuinely competitive.
+  const second = ranked[1] && ranked[1].score >= best.score * 0.55 ? ranked[1] : null;
+  const sources = [{ label: best.doc.label, cmd: best.doc.cmd }];
+  if (second) sources.push({ label: second.doc.label, cmd: second.doc.cmd });
+
+  askSay(
+    (lines.length
+      ? askQuoted(lines, terms)
+      : askLine(`Covered in <span class="clickable-cmd" data-cmd="${best.doc.cmd}">${best.doc.label}</span>.`)) +
+    askNote(`Found in <span class="clickable-cmd" data-cmd="${best.doc.cmd}">${best.doc.label}</span>` +
+            ` — open it for the full section.`),
+    sources);
 }
 
 // ─── COMMAND PROCESSOR ────────────────────────────────────────────────────────
@@ -870,7 +1314,9 @@ function processCommand(cmd) {
     case '': break;
     default: {
       const safeCmd = escapeHTML(cmd);
-      if (cmd === 'grep' || cmd.startsWith('grep ')) {
+      if (cmd === 'ask' || cmd.startsWith('ask ')) {
+        runAsk(cmd.slice(3));
+      } else if (cmd === 'grep' || cmd.startsWith('grep ')) {
         runGrep(cmd.slice(4));
       } else if (cmd === 'cd' || cmd.startsWith('cd ')) {
         runCd(cmd.slice(2));
@@ -928,6 +1374,13 @@ function processCommand(cmd) {
       } else {
         // Edit distance on a multi-word string produces nonsense ("cd ab" once
         // suggested "clear"), and anything valid with a space is handled above.
+        // A plain question is unambiguous — route it to ask rather than
+        // answering "command not found". Mistyped commands ("foo bar baz")
+        // still get the authentic shell reply.
+        if (/\?$/.test(cmd) || /^(what|who|where|when|why|how|does|do|is|are|can|has|have|did|will|would|should|tell)\b/.test(cmd)) {
+          runAsk(cmd);
+          return;
+        }
         const suggestion = cmd.includes(' ') ? null : findClosestCommand(cmd);
         if (suggestion) {
           addToHistory(`<div style="color:var(--red);">Command not found: ${safeCmd}. Did you mean <span class="clickable-cmd">${suggestion}</span>?</div>`);
