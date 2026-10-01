@@ -822,8 +822,18 @@ function askSources(list) {
   return `<div class="ask-src">source: ${links}</div>`;
 }
 
+// Answers render into the terminal by default and into the chat panel while it
+// is driving, so one engine serves both surfaces.
+let askSink = addToHistory;
+
 function askSay(bodyHTML, sources) {
-  addToHistory(`<div class="ask-answer">${bodyHTML}${askSources(sources)}</div>`);
+  askSink(`<div class="ask-answer">${bodyHTML}${askSources(sources)}</div>`);
+}
+
+function askInto(sink, fn) {
+  const previous = askSink;
+  askSink = sink;
+  try { fn(); } finally { askSink = previous; }
 }
 
 const askLine = t => `<div class="ask-line">${t}</div>`;
@@ -955,11 +965,23 @@ const ASK_FAQ = [
   },
   {
     re: /^(what('s| is| are)? ?(his|the|your)? ?)?(tech ?stack|skill ?set|skills|technologies|tools|stack)\s*\??$/,
-    run: () => { processCommand('skills'); },
+    run: () => askSay(
+      askLine('<b>Cloud</b> AWS · Azure · GCP &nbsp; <b>Containers</b> Docker · Kubernetes · HELM · EKS/ECS/AKS') +
+      askLine('<b>CI/CD</b> Jenkins · GitHub Actions · GitLab CI · Argo CD · Terraform · Ansible') +
+      askLine('<b>Monitoring</b> Prometheus · Grafana · Loki · CloudWatch &nbsp; <b>Scripting</b> Python · Bash · PowerShell') +
+      askNote('Full tree: <span class="clickable-cmd" data-cmd="skills">skills</span>'),
+      [{ label: 'skills/', cmd: 'skills' }]),
   },
   {
-    re: /^(what('s| is| are)? ?(his|the|your)? ?)?(projects?|case ?stud(y|ies)|portfolio work)\s*\??$/,
-    run: () => { lsProjects(); },
+    // Anchored for the bare noun, plus the asked-for-a-list phrasings. Kept off
+    // "tell me about the kubespray project", which retrieval answers better.
+    re: /^(what('s| is| are)? ?(his|the|your)? ?)?(projects?|case ?stud(y|ies)|portfolio work)\s*\??$|\b(what|which|any|list|show)\b.{0,14}\b(projects?|case stud)/,
+    run: () => askSay(
+      askLine('Three case studies, each readable here:') +
+      askLine('· <span class="clickable-cmd" data-cmd="cat projects/aws-sso.md">AWS Multi-Account Org &amp; SSO</span>') +
+      askLine('· <span class="clickable-cmd" data-cmd="cat projects/shopfloorgpt.md">ShopfloorGPT on AKS</span>') +
+      askLine('· <span class="clickable-cmd" data-cmd="cat projects/kubespray.md">Kubeadm → Kubespray Migration</span>'),
+      [{ label: 'projects/', cmd: 'ls projects' }]),
   },
   {
     re: /\b(who is (he|rishant|you)|who are you|introduce|tell me about (him|rishant|yourself)|about (him|rishant)|his background|summary)\b/,
@@ -972,7 +994,7 @@ const ASK_FAQ = [
   },
   {
     re: /\b(what can i ask|what commands|list commands|how do i use|what is this site|help me)\b/,
-    run: () => { processCommand('help'); },
+    run: () => askUsage(),
   },
 ];
 
@@ -1442,6 +1464,8 @@ document.addEventListener('click', e => {
     runCommandClick(clickable.dataset.cmd || clickable.textContent.trim());
     return;
   }
+  // The ask panel owns its own input; refocusing the terminal would fight it.
+  if (e.target.closest?.('#chat-panel, #chat-fab')) return;
   // Don't steal focus from form elements or their labels/buttons
   const tag = e.target.tagName;
   if (['INPUT','TEXTAREA','BUTTON','A','LABEL','SELECT'].includes(tag)) return;
@@ -1676,3 +1700,89 @@ window.addEventListener('hashchange', () => {
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
 window.onload = runIntro;
+
+// ─── ASK PANEL ────────────────────────────────────────────────────────────────
+// The corner launcher. Same engine as the `ask` command — it only swaps where
+// the answer is rendered — so there is one retrieval path to reason about and
+// one place to fix when an answer is wrong.
+const chatFab    = document.getElementById('chat-fab');
+const chatPanel  = document.getElementById('chat-panel');
+const chatLog    = document.getElementById('chat-log');
+const chatForm   = document.getElementById('chat-form');
+const chatInput  = document.getElementById('chat-input');
+const chatCloseB = document.getElementById('chat-close');
+
+if (chatFab && chatPanel) {
+  const chatAppend = (cls, html) => {
+    const el = document.createElement('div');
+    el.className = 'chat-msg ' + cls;
+    el.innerHTML = html;
+    makeClickableCmdsFocusable(el);   // the answer's source links are reachable by keyboard
+    fillExperience(el);               // "2+ years" is computed, not written
+    chatLog.appendChild(el);
+    chatLog.scrollTop = chatLog.scrollHeight;
+    return el;
+  };
+
+  let chatGreeted = false;
+  function chatGreet() {
+    if (chatGreeted) return;
+    chatGreeted = true;
+    chatAppend('chat-bot',
+      `<div class="ask-line">Ask about Rishant's work and I'll quote back what's written on this page.</div>` +
+      `<div class="ask-note">No AI and no server — it searches the page itself, so it can't make anything up.</div>` +
+      ASK_EXAMPLES.map(q =>
+        `<button type="button" class="chat-chip">${escapeHTML(q)}</button>`).join(''));
+  }
+
+  function chatAsk(question) {
+    const q = question.trim();
+    if (!q) return;
+    chatAppend('chat-me', escapeHTML(q));
+    askInto(html => chatAppend('chat-bot', html), () => runAsk(q));
+    trackCommand('ask', 'panel');
+  }
+
+  const chatIsOpen = () => !chatPanel.classList.contains('chat-hidden');
+
+  function chatOpen() {
+    chatPanel.classList.remove('chat-hidden');
+    chatFab.setAttribute('aria-expanded', 'true');
+    chatFab.setAttribute('aria-label', 'Close the ask panel');
+    chatGreet();
+    setTimeout(() => chatInput.focus(), 60);
+  }
+
+  function chatShut(returnFocus = true) {
+    chatPanel.classList.add('chat-hidden');
+    chatFab.setAttribute('aria-expanded', 'false');
+    chatFab.setAttribute('aria-label', "Ask a question about Rishant's work");
+    if (returnFocus) chatFab.focus();
+  }
+
+  chatFab.addEventListener('click', () => chatIsOpen() ? chatShut() : chatOpen());
+  chatCloseB.addEventListener('click', () => chatShut());
+
+  chatForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const q = chatInput.value;
+    chatInput.value = '';
+    chatAsk(q);
+  });
+
+  chatLog.addEventListener('click', e => {
+    const chip = e.target.closest('.chat-chip');
+    if (!chip) return;
+    chatAsk(chip.textContent);
+  });
+
+  // A source link points into the terminal, so get out of its way before the
+  // delegated handler types the command — this listener runs first.
+  chatPanel.addEventListener('click', e => {
+    if (e.target.closest('.clickable-cmd')) chatShut(false);
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && chatIsOpen()) { e.preventDefault(); chatShut(); }
+  });
+}
