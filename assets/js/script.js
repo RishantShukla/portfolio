@@ -646,10 +646,13 @@ const ASK_STOPWORDS = new Set((
 // them. Three characters or fewer is left alone so aws/eks/ecs/sql survive.
 function askStem(w) {
   if (w.length <= 3) return w;
-  if (/ies$/.test(w))      return w.slice(0, -3) + 'y';
-  if (/(ing|ed)$/.test(w)) return w.replace(/(ing|ed)$/, '');
-  if (/es$/.test(w))       return w.slice(0, -2);
-  if (/s$/.test(w))        return w.slice(0, -1);
+  if (/ies$/.test(w))              return w.slice(0, -3) + 'y';
+  if (/(ing|ed)$/.test(w))         return w.replace(/(ing|ed)$/, '');
+  // Stripping "es" wholesale split the pair it was meant to join: "databases"
+  // became "databas" while "database" stayed whole, so neither could ever match
+  // the other. Only drop both letters where the plural really adds them.
+  if (/(ch|sh|ss|x|z)es$/.test(w)) return w.slice(0, -2);
+  if (/s$/.test(w) && !/ss$/.test(w)) return w.slice(0, -1);
   return w;
 }
 
@@ -694,7 +697,11 @@ const ASK_ALIASES = {
   gitops: 'argo gitop',
   monitoring: 'prometheus grafana loki cloudwatch fluent observability monitor',
   observability: 'prometheus grafana loki cloudwatch fluent monitoring',
-  logging: 'loki fluent cloudwatch log',
+  logging: 'loki fluent cloudwatch observability',
+  // bare "log" matched the "$ git log --all --oneline --graph" header, which is
+  // the wrong sense of the word entirely
+  log: 'loki fluent cloudwatch logging', logs: 'loki fluent cloudwatch logging',
+  aggregation: 'loki fluent cloudwatch', centralized: 'loki fluent',
   alerting: 'prometheus grafana alert',
   cloud: 'aws azure gcp google',
   amazon: 'aws', gcp: 'google cloud', aks: 'azure kubernetes',
@@ -723,12 +730,20 @@ const ASK_ALIASES = {
 // the one failure mode that actually matters on a CV. Alias expansions belong to
 // the word that produced them, so a missing expansion is never reported as a
 // missing word.
+// Keys are written the way a person types them; lookups happen after stemming.
+// Indexing both spellings is what makes "databases" reach the "database" entry.
+const ASK_ALIAS_INDEX = (() => {
+  const m = Object.create(null);
+  for (const [k, v] of Object.entries(ASK_ALIASES)) { m[k] = v; m[askStem(k)] = v; }
+  return m;
+})();
+
 function askTermGroups(q) {
   const groups = [];
   for (const w of askWords(q)) {
     if (ASK_STOPWORDS.has(w)) continue;
     const terms = [askNorm(w)];
-    const alias = ASK_ALIASES[w] || ASK_ALIASES[askStem(w)];
+    const alias = ASK_ALIAS_INDEX[w] || ASK_ALIAS_INDEX[askStem(w)];
     if (alias) for (const a of alias.split(' ')) terms.push(askNorm(a));
     groups.push({ word: w, terms: [...new Set(terms)] });
   }
@@ -907,7 +922,7 @@ const ASK_FAQ = [
     run: () => askNotOnSite('he does not list rates or salary expectations publicly.'),
   },
   {
-    re: /\b(visa|work permit|sponsor|sponsorship|citizen|passport|right to work)\b/,
+    re: /\b(visa|work permit|sponsor\w*|sponsorship|citizen|passport|right to work)\b/,
     run: () => askNotOnSite('work authorisation is not covered here.'),
   },
   {
@@ -919,7 +934,7 @@ const ASK_FAQ = [
               '<span class="clickable-cmd" data-cmd="certs">certs</span>.'), []),
   },
   {
-    re: /\b(notice period|when can (he|you) (start|join)|start date|joining date|how soon)\b/,
+    re: /\b(notice period|when can (he|you) (start|join)|can he start|start date|joining date|how soon|how quickly|start immediately|available immediately)\b/,
     run: () => askSay(
       askLine('Open to opportunities and currently available — full-time and freelance.') +
       askNote('A specific start date is not listed; ask him directly via ' +
@@ -927,27 +942,27 @@ const ASK_FAQ = [
       [ASK_STATUS, ASK_CONTACT]),
   },
   {
-    re: /\b(available|availability|open to work|open to opportunit|looking for (a )?(job|role|work)|is he free|hiring|can i hire)\b/,
+    re: /\b(available|availability|open to work|open to opportunit\w*|looking for (a )?(job|role|work)|is he free|hiring|can i hire)\b/,
     run: () => askSay(
       askLine('<b>Open to opportunities</b> — available for full-time &amp; freelance roles.') +
       askLine('Works Remote · Hybrid. Response time: under 24 hours.'),
       [ASK_STATUS, ASK_CONTACT]),
   },
   {
-    re: /\b(freelanc|contract work|part.?time|consult|side project|moonlight)\b/,
+    re: /\b(freelanc\w*|contract work|part.?time|consult\w*|side project|moonlight)\b/,
     run: () => askSay(
       askLine('Yes — the availability section lists <b>full-time &amp; freelance</b> roles.'),
       [ASK_STATUS, ASK_CONTACT]),
   },
   {
-    re: /\b(how many years|years of experience|total experience|how long has|how long have|experience level|yrs|seniority|junior or senior)\b/,
+    re: /\b(how many years|years of experience|total experience|how long has|how long have|experience level|yrs|seniority|junior or senior|fresher|how experienced|level of experience)\b/,
     run: () => askSay(
       askLine(`<b>${careerExperience()}</b> — career started May 2024.`) +
       askLine('Currently DevOps Engineer at ResourceDekho IT Services (Remote) since Dec 2025.'),
       [{ label: 'about/', cmd: 'about' }, { label: 'experience/', cmd: 'experience' }]),
   },
   {
-    re: /\b(where (is|are|does|do) (he|you|rishant)|where.{0,12}(based|located|live)|location|based in|relocat|willing to move|remote|hybrid|onsite|on.site|wfh|which (city|country))\b/,
+    re: /\b(where (is|are|does|do) (he|you|rishant)|where.{0,12}(based|located|live)|location|based in|relocat\w*|willing to move|remote|hybrid|onsite|on.site|wfh|which (city|country))\b/,
     run: () => askSay(
       askLine('Hamirpur, India 🇮🇳 — works <b>Remote · Hybrid</b>.') +
       askLine('His current role at ResourceDekho IT Services is remote.'),
@@ -962,14 +977,14 @@ const ASK_FAQ = [
       [ASK_CONTACT]),
   },
   {
-    re: /\b(education|degree|qualification|college|university|studied|graduat|mca|bca|cgpa|academic|school)\b/,
+    re: /\b(education|degree|qualification|college|university|studied|graduat\w*|mca|bca|cgpa|academic|school)\b/,
     run: () => askSay(
       askLine('🎓 <b>MCA</b> — Cloud Computing &amp; DevOps, Chandigarh University · CGPA 7.70 · 2022–2024') +
       askLine('🎓 <b>BCA</b> — Himachal Pradesh University · CGPA 8.50 · 2019–2022'),
       [{ label: 'education/', cmd: 'education' }]),
   },
   {
-    re: /\b(certif|rhcsa|credential|badge|accredit)\b/,
+    re: /\b(certif\w*|rhcsa|credential|badge|accredit\w*)\b/,
     run: () => askSay(
       askLine('🏅 RHCSA (Red Hat) · Azure Fundamentals (Microsoft) · GitHub Foundations') +
       askLine('🏅 Python for Data Science (IBM) · DevOps Foundations: CI/CD (LinkedIn) · SQL (Coursera)') +
@@ -983,13 +998,27 @@ const ASK_FAQ = [
       askNote('<span class="clickable-cmd" data-cmd="resume">resume</span> opens it.'), []),
   },
   {
+    re: /\b(what (did|does) he do at|his (role|responsibilit|work) at|day.to.day|what does he actually do)\b/,
+    run: () => { askSink(document.getElementById('tpl-git-log').innerHTML); },
+  },
+  {
+    // "has he worked at amazon" was answered Yes off the back of "Amazon EKS".
+    // A provider's name in a bullet is a tool, not an employer.
+    re: /\b(worked? at|work(ed)? for|employed (by|at)|previous (compan|employer|job)|past employer|which compan|has he been at)\b/,
+    run: () => askSay(
+      askLine('The work history here lists one employer: <b>ResourceDekho IT Services</b> — DevOps Engineer, Remote, Dec 2025 – Present.') +
+      askNote('Names like Amazon, Microsoft or Red Hat appear on this page as tools he uses and certifications he holds, not as employers. ' +
+              'Full history: <span class="clickable-cmd" data-cmd="experience">experience</span>.'),
+      [{ label: 'experience/', cmd: 'experience' }]),
+  },
+  {
     re: /\b(current (company|employer|role|job)|who does he work for|where does he work now|present employer)\b/,
     run: () => askSay(
       askLine('<b>DevOps Engineer</b> at ResourceDekho IT Services (Remote), Dec 2025 – Present.'),
       [{ label: 'experience/', cmd: 'experience' }]),
   },
   {
-    re: /\b(why (should|would).{0,20}hire|why him|why you|strength|good fit|stand out|best at|sell yourself)\b/,
+    re: /\b(why (should|would).{0,20}hire|why him|why you|strength\w*|good fit|stand out|best at|sell yourself)\b/,
     run: () => askSay(
       askLine('Short version: he automates infrastructure end to end — Terraform and Ansible for ' +
               'provisioning, Argo CD for GitOps delivery, EKS/ECS for runtime, and Prometheus/Grafana ' +
@@ -1011,7 +1040,7 @@ const ASK_FAQ = [
   {
     // Anchored for the bare noun, plus the asked-for-a-list phrasings. Kept off
     // "tell me about the kubespray project", which retrieval answers better.
-    re: /^(what('s| is| are)? ?(his|the|your)? ?)?(projects?|case ?stud(y|ies)|portfolio work)\s*\??$|\b(what|which|any|list|show)\b.{0,14}\b(projects?|case stud)/,
+    re: /^(what('s| is| are)? ?(his|the|your)? ?)?(projects?|case ?stud(y|ies)|portfolio work|best work|strongest work)\s*\??$|\b(best|strongest|proudest|favourite|favorite) (work|project)|\b(what|which|any|list|show)\b.{0,14}\b(projects?|case stud)/,
     run: () => askSay(
       askLine('Three case studies, each readable here:') +
       askLine('· <span class="clickable-cmd" data-cmd="cat projects/aws-sso.md">AWS Multi-Account Org &amp; SSO</span>') +
@@ -1083,6 +1112,24 @@ const ASK_YESNO = /^(do|does|did|is|are|was|were|has|have|had|can|could|will|wou
 
 const askWordList = words => words.map(w => `<b>${escapeHTML(w)}</b>`).join(', ');
 
+// "kubernetes AND rust" asks about two things; "log aggregation" and "cloud
+// providers" are one noun phrase each. Announcing that the page does not
+// mention "aggregation" or "providers" is noise dressed up as honesty, so a
+// miss is only reported when its own clause turned up nothing at all.
+function askCoordinatedMisses(normalised, present, missing) {
+  if (!present.length || !missing.length) return missing;
+  const found = new Set(present.map(g => g.word));
+  const clauses = normalised.split(/\s+(?:and|or|but|plus)\s+|[,;/]/);
+  return missing.filter(g => {
+    const clause = clauses.find(cl => askWords(cl).includes(g.word));
+    return clause !== undefined && !askWords(clause).some(w => found.has(w));
+  });
+}
+
+// The page lists what he has done; it cannot weigh two things against each
+// other. Saying so is better than ranking them by word count.
+const ASK_COMPARE = /\b(compare|comparison|versus|vs\.?|better at|stronger (at|in)|which is he better|more experience (with|in))\b/;
+
 function runAsk(rawQuestion) {
   const question = rawQuestion.trim();
   if (!question) { askUsage(); return; }
@@ -1098,13 +1145,16 @@ function runAsk(rawQuestion) {
   const idx      = askBuildIndex();
   const inCorpus = g => g.terms.some(t => idx.df[t]);
   const present  = groups.filter(inCorpus);
-  const missing  = groups.filter(g => !inCorpus(g));
+  const missing  = askCoordinatedMisses(normalised, groups.filter(inCorpus), groups.filter(g => !inCorpus(g)));
   const yesNo    = ASK_YESNO.test(normalised);
+  const caveat   = ASK_COMPARE.test(normalised)
+    ? askNote('This page lists what he has done — it has no basis for ranking one against the other. Both, as written:')
+    : '';
 
   // Nothing the visitor asked about is written here. Name what was looked for
   // rather than giving a shrug — "nothing mentions cobol" is an answer.
   if (!present.length) {
-    const words = askWordList([...new Set(missing.map(g => g.word))]);
+    const words = askWordList([...new Set(groups.map(g => g.word))]);
     askSay(
       askLine(yesNo
         ? `<b class="ask-no">No</b> — nothing on this page mentions ${words}.`
@@ -1139,7 +1189,7 @@ function runAsk(rawQuestion) {
   const sources = [...new Map(rows.map(r => [r.doc.label, { label: r.doc.label, cmd: r.doc.cmd }])).values()];
 
   askSay(
-    askLine(verdict) +
+    askLine(verdict) + caveat +
     (rows.length ? askEvidenceHTML(rows, terms) : ''),
     sources);
 }
