@@ -634,7 +634,9 @@ const ASK_STOPWORDS = new Set((
   'it its just like ll lot m many me much my of on once only or other our out over own ' +
   'please re s so some somebody someone such t tell than that the their them then there ' +
   'these they this those to told too u up us ve was we were what when where whether which ' +
-  'while who whom why will with would you your yours know knows known ' +
+  'while who whom why will with would you your yours know knows known now today currently recently ' +
+  // filler: naming these as "not mentioned" is noise, never an answer
+  'lately presently nowadays still yet actually really done thing things stuff ' +
   // Scaffolding, not content: "any azure WORK?" and "docker EXPERIENCE" were
   // both answered by about/, which is short enough that BM25's length term
   // made one incidental "work history" link outrank the actual answer.
@@ -905,6 +907,12 @@ function askEvidenceHTML(rows, terms) {
 // Questions where ranked lines would read badly — availability, salary, notice
 // period — and the ones that have no answer on the page at all. Checked before
 // retrieval, so these are the only questions with a written reply.
+// "DevOps Engineer · Company, Place · May 2024 – Dec 2025"
+function askRoles() {
+  const tpl = document.getElementById('tpl-git-log');
+  return tpl ? extractLines(tpl).filter(l => /·/.test(l) && /\d{4}/.test(l)) : [];
+}
+
 const ASK_CONTACT = { label: 'contact/', cmd: 'contact' };
 const ASK_STATUS  = { label: 'status/',  cmd: 'status' };
 
@@ -998,18 +1006,32 @@ const ASK_FAQ = [
       askNote('<span class="clickable-cmd" data-cmd="resume">resume</span> opens it.'), []),
   },
   {
+    // "work/worked/experience" are stopwords so they cannot dominate scoring,
+    // which left "tell me about his work" with no content words to search at all.
+    re: /\b(his work\b|what work\b|what (has|have) he (done|built|achieved|delivered)|what does he do\b|working on|tell me about (his )?(work|career|background|experience)|work experience|professional background)/,
+    run: () => { askSink(document.getElementById('tpl-git-log').innerHTML); },
+  },
+  {
     re: /\b(what (did|does) he do at|his (role|responsibilit|work) at|day.to.day|what does he actually do)\b/,
     run: () => { askSink(document.getElementById('tpl-git-log').innerHTML); },
   },
   {
     // "has he worked at amazon" was answered Yes off the back of "Amazon EKS".
     // A provider's name in a bullet is a tool, not an employer.
-    re: /\b(worked? at|work(ed)? for|employed (by|at)|previous (compan|employer|job)|past employer|which compan|has he been at)\b/,
-    run: () => askSay(
-      askLine('The work history here lists one employer: <b>ResourceDekho IT Services</b> — DevOps Engineer, Remote, Dec 2025 – Present.') +
-      askNote('Names like Amazon, Microsoft or Red Hat appear on this page as tools he uses and certifications he holds, not as employers. ' +
-              'Full history: <span class="clickable-cmd" data-cmd="experience">experience</span>.'),
-      [{ label: 'experience/', cmd: 'experience' }]),
+    re: /\b(where\s+(has|have|had|did|does|do)?\s*(he|you|rishant)?\s*work\w*|work\w*\s+(at|for)\b|employed\s+(by|at)\b|previous\s+(compan|employer|job|role)\w*|past\s+(employer|job|role)\w*|which\s+compan\w*|has\s+he\s+been\s+at\b|(still|currently|now)\s+(at|with)\s+\w|work\s+history|employment\s+history|career\s+history|his\s+jobs?\b|what\s+companies)/,
+    run: () => {
+      // Read off the page, not written here. The first version of this answer
+      // said "one employer" and silently erased the Vavensoft role — a worse
+      // error than the one it was added to fix.
+      const roles = askRoles();
+      askSay(
+        askLine(`${roles.length} role${roles.length === 1 ? '' : 's'} on this page, most recent first:`) +
+        roles.map(r => askLine('· ' + escapeHTML(r))).join('') +
+        askNote('Names like Amazon, Microsoft or Red Hat appear here as tools he uses and ' +
+                'certifications he holds, not as employers. Full detail: ' +
+                '<span class="clickable-cmd" data-cmd="experience">experience</span>.'),
+        [{ label: 'experience/', cmd: 'experience' }]);
+    },
   },
   {
     re: /\b(current (company|employer|role|job)|who does he work for|where does he work now|present employer)\b/,
@@ -1110,6 +1132,12 @@ function askUsage() {
 // "tell me about X" just deserves the evidence.
 const ASK_YESNO = /^(do|does|did|is|are|was|were|has|have|had|can|could|will|would|any|anything|know|knows)\b/;
 
+// "is he still at Vavensoft" asks about a state, not about whether a word is
+// printed somewhere. Answering "Yes — found in 1 section" means "yes, that word
+// appears", which reads as "yes, he is" — and he left in Dec 2025. These
+// questions get the neutral lead and the dated evidence instead.
+const ASK_TEMPORAL = /\b(still|currently|right now|at present|these days|anymore|any more|as of)\b/;
+
 const askWordList = words => words.map(w => `<b>${escapeHTML(w)}</b>`).join(', ');
 
 // "kubernetes AND rust" asks about two things; "log aggregation" and "cloud
@@ -1146,7 +1174,7 @@ function runAsk(rawQuestion) {
   const inCorpus = g => g.terms.some(t => idx.df[t]);
   const present  = groups.filter(inCorpus);
   const missing  = askCoordinatedMisses(normalised, groups.filter(inCorpus), groups.filter(g => !inCorpus(g)));
-  const yesNo    = ASK_YESNO.test(normalised);
+  const yesNo    = ASK_YESNO.test(normalised) && !ASK_TEMPORAL.test(normalised);
   const caveat   = ASK_COMPARE.test(normalised)
     ? askNote('This page lists what he has done — it has no basis for ranking one against the other. Both, as written:')
     : '';
