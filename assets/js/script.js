@@ -1165,8 +1165,8 @@ function askUsage() {
     .join('');
   askSay(
     askLine('Ask a question about his work in plain English.') +
-    askNote('No AI and no server — it searches what is written on this page and ' +
-            'quotes back the lines that matched. Try:') + examples, []);
+    askNote('It searches what is written on this page and quotes back the lines ' +
+            'that matched. Try:') + examples, []);
 }
 
 // Shape of the question, not its content: "does he know X" deserves a verdict,
@@ -1954,7 +1954,7 @@ if (chatFab && chatPanel) {
     chatGreeted = true;
     chatAppend('chat-bot',
       `<div class="ask-line">Ask about Rishant's work and I'll quote back what's written on this page.</div>` +
-      `<div class="ask-note">No AI and no server — it searches the page itself, so it can't make anything up.</div>` +
+      `<div class="ask-note">It searches the page itself, so it can't make anything up.</div>` +
       ASK_EXAMPLES.map(q =>
         `<button type="button" class="chat-chip">${escapeHTML(q)}</button>`).join(''));
   }
