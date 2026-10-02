@@ -752,6 +752,37 @@ function askTermGroups(q) {
   return groups;
 }
 
+// "ansible tower" and "azure devops" are product names; "aws and azure" is two
+// things. The difference is whether the words sit next to each other, so this
+// reads the raw word list — a stopword between them ends the phrase.
+function askExpand(w) {
+  const terms = [askNorm(w)];
+  const alias = ASK_ALIAS_INDEX[w] || ASK_ALIAS_INDEX[askStem(w)];
+  if (alias) for (const a of alias.split(' ')) terms.push(askNorm(a));
+  return [...new Set(terms)];
+}
+
+function askAdjacentPairs(q) {
+  const words = askWords(q);
+  const pairs = [];
+  for (let i = 0; i + 1 < words.length; i++) {
+    const a = words[i], b = words[i + 1];
+    if (ASK_STOPWORDS.has(a) || ASK_STOPWORDS.has(b)) continue;
+    const ta = askExpand(a), tb = askExpand(b);
+    pairs.push({
+      // the words as typed, for showing back; the stems, for looking up
+      text: a + ' ' + b,
+      key: askNorm(a) + ' ' + askNorm(b),
+      // "log aggregation" is not written here, but both words point at Loki and
+      // Fluent Bit, so the thing being asked about is covered. "azure devops"
+      // shares nothing, which is what makes it a product name rather than a
+      // pair of skills he happens to have.
+      synonymous: ta.some(t => tb.includes(t)),
+    });
+  }
+  return pairs;
+}
+
 function askQueryTerms(q) {
   return askTermGroups(q).flatMap(g => g.terms);
 }
@@ -792,7 +823,17 @@ function askBuildIndex() {
     for (const t of Object.keys(d.tf)) df[t] = (df[t] || 0) + 1;
   }
 
-  askIndex = { docs, df, N: docs.length, avgdl: totalLen / (docs.length || 1) };
+  // Adjacent content-word pairs, so a question can ask whether a *phrase* is
+  // here rather than whether its words are here separately.
+  const bigrams = new Set();
+  for (const d of docs) {
+    for (const line of d.lines) {
+      const t = askWords(line).filter(w => !ASK_STOPWORDS.has(w)).map(askNorm);
+      for (let i = 0; i + 1 < t.length; i++) bigrams.add(t[i] + ' ' + t[i + 1]);
+    }
+  }
+
+  askIndex = { docs, df, bigrams, N: docs.length, avgdl: totalLen / (docs.length || 1) };
   return askIndex;
 }
 
@@ -1174,7 +1215,22 @@ function runAsk(rawQuestion) {
   const inCorpus = g => g.terms.some(t => idx.df[t]);
   const present  = groups.filter(inCorpus);
   const missing  = askCoordinatedMisses(normalised, groups.filter(inCorpus), groups.filter(g => !inCorpus(g)));
-  const yesNo    = ASK_YESNO.test(normalised) && !ASK_TEMPORAL.test(normalised);
+  // "Yes" has to mean the things asked about actually occur together, not that
+  // each word turns up somewhere. "ansible tower" matched Ansible and claimed
+  // Yes; "jira automation" matched automation and did the same. Where a word is
+  // disclosed as missing the sentence already says so, and keeps its verdict.
+  // Every phrase the question asks about has to exist as a phrase. Azure and
+  // DevOps both appear here and even share a line, but "Azure DevOps" is a
+  // product he has not listed, and a Yes would be claiming he has.
+  const gaps = askAdjacentPairs(question)
+    .filter(ph => !ph.synonymous && !idx.bigrams.has(ph.key));
+  const phrasesHere = gaps.length === 0;
+  const together = phrasesHere && (groups.length < 2 || idx.docs.some(d => d.lines.some(line => {
+    const lt = new Set(askTokens(line));
+    return groups.every(g => g.terms.some(t => lt.has(t)));
+  })));
+  const yesNo    = ASK_YESNO.test(normalised) && !ASK_TEMPORAL.test(normalised)
+                   && (missing.length > 0 || together);
   const caveat   = ASK_COMPARE.test(normalised)
     ? askNote('This page lists what he has done — it has no basis for ranking one against the other. Both, as written:')
     : '';
@@ -1199,8 +1255,23 @@ function runAsk(rawQuestion) {
   const n        = hitDocs.length;
   const where    = `${n} section${n === 1 ? '' : 's'}`;
 
+  const shaped = ASK_YESNO.test(normalised) && !ASK_TEMPORAL.test(normalised);
+  const absent = groups.filter(g => !inCorpus(g));
+
   let verdict;
-  if (missing.length) {
+  const phraseGap = gaps.map(ph => ph.text);
+
+  if (!missing.length && shaped && !together && phraseGap.length) {
+    // Asked as a yes/no about a thing whose words never appear together, and
+    // part of it is not here at all: "does he know ansible tower". Saying
+    // "found in 3 sections" over Ansible lines still reads as yes, so name it.
+    const gap = absent.length
+      ? askWordList([...new Set(absent.map(g => g.word))])
+      : askWordList([...new Set(phraseGap)]);
+    const has = present.length
+      ? ` What it does say about ${askWordList([...new Set(present.map(g => g.word))])}:` : '';
+    verdict = `<b class="ask-no">Nothing</b> on this page mentions ${gap}.${has}`;
+  } else if (missing.length) {
     // The honest case: part of the question is answered and part is not.
     const yes = askWordList([...new Set(present.map(g => g.word))]);
     const no  = askWordList([...new Set(missing.map(g => g.word))]);
