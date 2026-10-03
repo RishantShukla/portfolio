@@ -792,6 +792,10 @@ a.cert-item:hover .cert-name { color: var(--blue); }
 .grep-hit  { color: var(--yellow); font-weight: bold; }
 .grep-meta { color: var(--fg-dim); font-size: 12px; margin-top: 10px; }
 
+/* ── PIPES ────────────────────────────────────────────────────────────────── */
+.pipe-line { color: var(--fg); font-size: 13px; line-height: 1.6; margin-bottom: 3px; white-space: pre-wrap; }
+.pipe-meta { color: var(--fg-dim); font-size: 12px; margin-top: 10px; }
+
 /* ── ASK ──────────────────────────────────────────────────────────────────── */
 .ask-answer { font-size: 13px; line-height: 1.65; }
 .ask-line   { color: var(--fg); margin-bottom: 6px; }

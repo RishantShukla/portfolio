@@ -320,9 +320,16 @@ const availableCommands = [
   'help','about','neofetch','whoami','experience','git log','projects','skills',
   'tree','certs','education','contact','email','status','deploy','ls','resume',
   'clear','m','uptime','ping','history','date','pwd','hostname','echo','cat readme','cat_readme',
-  'ask',
+  'ask','vcard',
   'linkedin','github','joke','quote','fortune','hack','coffee','theme','sudo','cd','grep','ls projects'
 ];
+// Offered by the ghost so a pipe is discoverable without reading the help.
+const PIPE_EXAMPLES = [
+  'skills | grep aws',
+  'experience | grep terraform',
+  'skills | wc -l',
+];
+
 const commandHistory = [];
 let historyIndex = -1;
 const sessionStart = Date.now();
@@ -340,6 +347,7 @@ function completionCandidates() {
   for (const d of Object.keys(DIRECTORIES))  list.push(`cd ${d}`);
   for (const t of THEMES)                    list.push(`theme ${t}`);
   for (const q of ASK_EXAMPLES)              list.push(`ask ${q}`);
+  for (const p of PIPE_EXAMPLES)             list.push(p);
   return list;
 }
 
@@ -1293,6 +1301,224 @@ function runAsk(rawQuestion) {
     sources);
 }
 
+// ─── VCARD ────────────────────────────────────────────────────────────────────
+// `vcard` downloads a .vcf so a recruiter can save the contact in one action
+// instead of copying four fields. Every value is read off the contact and
+// about blocks rather than written here, so it cannot drift from the page.
+
+function fieldsFrom(tplId, keySel, valSel, rowSel) {
+  const tpl = document.getElementById(tplId);
+  const out = {};
+  if (!tpl) return out;
+  tpl.querySelectorAll(rowSel).forEach(row => {
+    const k = row.querySelector(keySel)?.textContent.replace(/["']/g, '').trim().toLowerCase();
+    const v = row.querySelector(valSel)?.textContent.replace(/["']/g, '').trim();
+    if (k && v) out[k] = v;
+  });
+  return out;
+}
+
+// RFC 6350: backslash, comma and semicolon are structural inside a value.
+const vcEscape = v => String(v).replace(/\\/g, '\\\\').replace(/[,;]/g, m => '\\' + m).replace(/\r?\n/g, '\\n');
+
+function buildVCard() {
+  const c = fieldsFrom('tpl-contact',  '.cj-key', '.cj-val', '.cj-row');
+  const a = fieldsFrom('tpl-neofetch', '.nf-key', '.nf-val', '.nf-row');
+
+  const full  = a.user || 'Rishant Shukla';
+  const parts = full.split(/\s+/);
+  const last  = parts.length > 1 ? parts.pop() : '';
+  const first = parts.join(' ');
+  // "Hamirpur, India 🇮🇳" -> city + country, emoji dropped
+  const loc   = (c.location || a.location || '').replace(/[\u{1F1E6}-\u{1F1FF}\u{1F300}-\u{1FAFF}]/gu, '').trim();
+  const [city, country] = loc.split(',').map(x => (x || '').trim());
+
+  const lines = [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    `N:${vcEscape(last)};${vcEscape(first)};;;`,
+    `FN:${vcEscape(full)}`,
+  ];
+  if (a.role)    lines.push(`TITLE:${vcEscape(a.role)}`);
+  if (a.company) lines.push(`ORG:${vcEscape(a.company)}`);
+  if (c.email)   lines.push(`EMAIL;TYPE=INTERNET,PREF:${vcEscape(c.email)}`);
+  const tel = (c.phone || a.phone || '').replace(/[^+\d]/g, '');
+  if (tel)       lines.push(`TEL;TYPE=CELL:${tel}`);
+  if (city)      lines.push(`ADR;TYPE=WORK:;;;${vcEscape(city)};;;${vcEscape(country || '')}`);
+  lines.push(`URL:${location.origin}${location.pathname}`);
+  if (c.linkedin) lines.push(`X-SOCIALPROFILE;TYPE=linkedin:https://${vcEscape(c.linkedin.replace(/^https?:\/\//, ''))}`);
+  if (c.github)   lines.push(`X-SOCIALPROFILE;TYPE=github:https://${vcEscape(c.github.replace(/^https?:\/\//, ''))}`);
+  if (a.focus)    lines.push(`NOTE:${vcEscape(a.focus.replace(/\s*·\s*/g, ', '))}`);
+  lines.push(`REV:${new Date().toISOString().replace(/\.\d{3}/, '')}`);
+  lines.push('END:VCARD');
+
+  return lines.join('\r\n') + '\r\n';   // CRLF is required by the spec
+}
+
+function runVCard() {
+  let card;
+  try { card = buildVCard(); } catch { card = null; }
+  if (!card) {
+    addToHistory(`<div style="color:var(--red);">vcard: could not read the contact block</div>`);
+    return;
+  }
+  const name = (buildVCardName() || 'contact').replace(/\s+/g, '_');
+  let ok = true;
+  try {
+    const blob = new Blob([card], { type: 'text/vcard;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const el   = document.createElement('a');
+    el.href = url; el.download = `${name}.vcf`;
+    document.body.appendChild(el); el.click(); el.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  } catch { ok = false; }
+
+  addToHistory(
+    (ok ? `<div style="color:var(--green);">Saved <b>${escapeHTML(name)}.vcf</b> — ` +
+             `${card.split('\r\n').filter(Boolean).length - 3} fields.</div>`
+        : `<div style="color:var(--red);">vcard: your browser blocked the download.</div>`) +
+    `<div style="color:var(--fg-dim);font-size:12px;margin-top:6px;">` +
+    `// import it into any address book, or open ` +
+    `<span class="clickable-cmd" data-cmd="contact">contact</span> to copy the fields instead.</div>`);
+}
+
+function buildVCardName() {
+  const a = fieldsFrom('tpl-neofetch', '.nf-key', '.nf-val', '.nf-row');
+  return a.user || 'Rishant Shukla';
+}
+
+// ─── PIPES ────────────────────────────────────────────────────────────────────
+// `skills | grep aws`, `experience | grep terraform | head -3`. The left side
+// produces lines, each filter transforms them. Sources read the same templates
+// grep and ask already read, so a pipeline can never print something the
+// section itself would not.
+
+function pipeSource(rawCmd) {
+  const cmd = canonical(rawCmd.trim().toLowerCase().replace(/\s+/g, ' '));
+
+  if (SEARCHABLE[cmd]) {
+    const tpl = document.getElementById(SEARCHABLE[cmd]);
+    return tpl ? [...new Set(extractLines(tpl))] : null;
+  }
+  if (cmd === 'ls' || cmd === 'ls -la' || cmd === 'ls -l') {
+    const tpl = document.getElementById('tpl-ls');
+    return tpl ? extractLines(tpl).filter(l => !/^total /.test(l)) : null;
+  }
+  if (/^ls +projects\/?$/.test(cmd) || /^ls +-l[a]? +projects\/?$/.test(cmd)) {
+    return Object.keys(CASE_STUDIES);
+  }
+  if (cmd.startsWith('cat ')) {
+    const study = resolveCaseStudy(cmd.slice(4));
+    if (study) {
+      const tpl = document.getElementById(CASE_STUDIES[study].tpl);
+      return tpl ? [...new Set(extractLines(tpl))] : null;
+    }
+    return null;
+  }
+  if (cmd === 'help')    return [...availableCommands];
+  if (cmd === 'history') return commandHistory.slice();
+  if (cmd === 'certs')   return [...new Set(extractLines(document.getElementById('tpl-education')))];
+  return null;
+}
+
+// `-n 3`, `-3` and a bare `3` all mean the same thing to anyone who has used a
+// shell without thinking too hard about it.
+function pipeCount(args, fallback) {
+  for (const a of args) {
+    const m = /^-?n?(\d+)$/.exec(a);
+    if (m) return parseInt(m[1], 10);
+  }
+  return fallback;
+}
+
+const PIPE_FILTERS = {
+  // Case-insensitive to match the standalone grep on this site, which is what
+  // anyone here will have tried first.
+  grep(lines, args) {
+    const flags = args.filter(a => /^-/.test(a) && !/^-?n?\d+$/.test(a));
+    const terms = args.filter(a => !/^-/.test(a));
+    const term  = terms.join(' ').trim();
+    if (!term) throw new Error('usage: grep &lt;term&gt;');
+    const invert = flags.some(f => f.includes('v'));
+    const hit = l => l.toLowerCase().includes(term.toLowerCase());
+    const out = lines.filter(l => (invert ? !hit(l) : hit(l)));
+    if (flags.some(f => f.includes('c'))) return { lines: [String(out.length)] };
+    return { lines: out, term };
+  },
+  head: (lines, args) => ({ lines: lines.slice(0, pipeCount(args, 10)) }),
+  tail: (lines, args) => ({ lines: lines.slice(-pipeCount(args, 10)) }),
+  sort: (lines, args) => {
+    const s = [...lines].sort((a, b) => a.localeCompare(b));
+    return { lines: args.some(a => a.includes('r')) ? s.reverse() : s };
+  },
+  uniq: lines => ({ lines: [...new Set(lines)] }),
+  wc:   (lines, args) =>
+    ({ lines: [args.some(a => a.includes('w'))
+        ? String(lines.join(' ').split(/\s+/).filter(Boolean).length)
+        : String(lines.length)] }),
+  nl:   lines => ({ lines: lines.map((l, i) => `${String(i + 1).padStart(4)}  ${l}`) }),
+};
+
+function pipeUsage(extra) {
+  addToHistory(
+    (extra ? `<div style="color:var(--red);">${extra}</div>` : '') +
+    `<div style="color:var(--fg-dim);font-size:12px;margin-top:6px;">` +
+    `// pipe a section through a filter — ` +
+    `<span class="clickable-cmd" data-cmd="skills | grep aws">skills | grep aws</span>, ` +
+    `<span class="clickable-cmd" data-cmd="experience | grep terraform">experience | grep terraform</span>, ` +
+    `<span class="clickable-cmd" data-cmd="skills | wc -l">skills | wc -l</span><br>` +
+    `// filters: grep, head, tail, sort, uniq, wc, nl</div>`);
+}
+
+function runPipeline(raw) {
+  const parts = raw.split('|').map(s => s.trim());
+  const srcCmd = parts.shift();
+
+  if (!srcCmd) { pipeUsage('bash: syntax error near unexpected token `|&#39;'); return; }
+  if (parts.some(p => !p)) { pipeUsage('bash: syntax error near unexpected token `|&#39;'); return; }
+
+  let lines = pipeSource(srcCmd);
+  if (lines === null) {
+    pipeUsage(`bash: ${escapeHTML(srcCmd)}: cannot pipe this command`);
+    return;
+  }
+
+  let term = '';
+  for (const stage of parts) {
+    const [name, ...args] = stage.split(/\s+/);
+    const filter = PIPE_FILTERS[name];
+    if (!filter) {
+      pipeUsage(`bash: ${escapeHTML(name)}: command not found`);
+      return;
+    }
+    try {
+      const res = filter(lines, args);
+      lines = res.lines;
+      if (res.term) term = res.term;
+    } catch (e) {
+      pipeUsage(escapeHTML(e.message).replace('&amp;lt;', '&lt;').replace('&amp;gt;', '&gt;'));
+      return;
+    }
+  }
+
+  if (!lines.length) {
+    addToHistory(`<div style="color:var(--fg-dim);">(no matching lines)</div>`);
+    return;
+  }
+
+  const CAP = 40;
+  const shown = lines.slice(0, CAP).map(l => {
+    const clipped = l.length > 220 ? l.slice(0, 220) + '…' : l;
+    return `<div class="pipe-line">${term ? highlightTerm(clipped, term) : escapeHTML(clipped)}</div>`;
+  }).join('');
+
+  const more = lines.length > CAP
+    ? `<div class="pipe-meta">… ${lines.length - CAP} more line${lines.length - CAP === 1 ? '' : 's'}. Add <span class="clickable-cmd" data-cmd="${escapeHTML(raw)} | head">| head</span> to trim.</div>`
+    : `<div class="pipe-meta">${lines.length} line${lines.length === 1 ? '' : 's'}</div>`;
+
+  addToHistory(shown + more);
+}
+
 // ─── COMMAND PROCESSOR ────────────────────────────────────────────────────────
 function processCommand(cmd) {
   syncHash(cmd);
@@ -1560,7 +1786,11 @@ function processCommand(cmd) {
     case '': break;
     default: {
       const safeCmd = escapeHTML(cmd);
-      if (cmd === 'ask' || cmd.startsWith('ask ')) {
+      if (cmd === 'vcard' || cmd === 'vcf' || cmd === 'contact --save') {
+        runVCard();
+      } else if (cmd.includes('|')) {
+        runPipeline(cmd);
+      } else if (cmd === 'ask' || cmd.startsWith('ask ')) {
         runAsk(cmd.slice(3));
       } else if (cmd === 'grep' || cmd.startsWith('grep ')) {
         runGrep(cmd.slice(4));
