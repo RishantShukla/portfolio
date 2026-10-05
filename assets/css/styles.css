@@ -501,7 +501,7 @@ body.matrix-mode #nav-links button:hover { color: #00ff41 !important; background
 }
 #real-prompt { position: relative; }
 #real-prompt.hidden { display: none; }
-#input-display { color: var(--fg); }
+#input-display { color: var(--fg); white-space: pre-wrap; }
 /* live command-line highlighting, the way a modern shell colours as you type */
 .sx-cmd  { color: var(--green); }
 .sx-bad  { color: var(--red); text-decoration: underline wavy var(--red); text-underline-offset: 3px; }

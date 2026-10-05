@@ -2725,6 +2725,17 @@ if (chatFab && chatPanel) {
     const it = rows[i];
     if (!it) return;
     close(false);
+    // runCommandClick refuses to run while the boot sequence is still typing,
+    // so picking something during those few seconds used to close the palette
+    // and silently do nothing. Hold the choice and run it when boot finishes.
+    if (isBooting) {
+      const wait = setInterval(() => {
+        if (isBooting) return;
+        clearInterval(wait);
+        runCommandClick(it.cmd, 'palette');
+      }, 90);
+      return;
+    }
     runCommandClick(it.cmd, 'palette');
   }
 
