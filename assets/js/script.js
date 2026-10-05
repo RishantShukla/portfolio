@@ -18,8 +18,17 @@ function currentTheme() {
   return document.documentElement.getAttribute('data-theme') || 'tokyo-night';
 }
 
+let themeSwitchTimer;
 function applyTheme(name) {
-  document.documentElement.setAttribute('data-theme', name);
+  // Cross-fade the palette instead of snapping. The class is removed again so
+  // the transition cannot interfere with anything else on the page.
+  const root = document.documentElement;
+  if (root.getAttribute('data-theme') !== name && !prefersReducedMotion()) {
+    root.classList.add('theme-switching');
+    clearTimeout(themeSwitchTimer);
+    themeSwitchTimer = setTimeout(() => root.classList.remove('theme-switching'), 380);
+  }
+  root.setAttribute('data-theme', name);
   try { localStorage.setItem(THEME_KEY, name); } catch { /* private mode */ }
 }
 
@@ -320,7 +329,7 @@ const availableCommands = [
   'help','about','neofetch','whoami','experience','git log','projects','skills',
   'tree','certs','education','contact','email','status','deploy','ls','resume',
   'clear','m','uptime','ping','history','date','pwd','hostname','echo','cat readme','cat_readme',
-  'ask','vcard',
+  'ask','vcard','split',
   'linkedin','github','joke','quote','fortune','hack','coffee','theme','sudo','cd','grep','ls projects'
 ];
 // Offered by the ghost so a pipe is discoverable without reading the help.
@@ -348,6 +357,7 @@ function completionCandidates() {
   for (const t of THEMES)                    list.push(`theme ${t}`);
   for (const q of ASK_EXAMPLES)              list.push(`ask ${q}`);
   for (const p of PIPE_EXAMPLES)             list.push(p);
+  list.push('split skills experience');
   return list;
 }
 
@@ -366,13 +376,13 @@ function updateGhost() {
 function acceptGhost() {
   if (!inputGhost.textContent) return false;
   cmdInput.value += inputGhost.textContent;
-  inputDisplay.textContent = cmdInput.value;
+  renderInput(cmdInput.value);
   updateGhost();
   return true;
 }
 
 cmdInput.addEventListener('input', function() {
-  inputDisplay.textContent = this.value;
+  renderInput(this.value);
   updateGhost();
 });
 
@@ -393,7 +403,7 @@ cmdInput.addEventListener('keydown', function(e) {
     if (this.value.length > 0) {
       addCommandToHistory(this.value + '^C');
       addToHistory(`<div style="color:var(--fg-dim);">^C</div>`);
-      this.value = ''; inputDisplay.textContent = ''; updateGhost();
+      this.value = ''; renderInput(''); updateGhost();
       scrollToBottom();
     }
     return;
@@ -403,7 +413,7 @@ cmdInput.addEventListener('keydown', function(e) {
     if (commandHistory.length > 0) {
       if (historyIndex < commandHistory.length - 1) historyIndex++;
       this.value = commandHistory[commandHistory.length - 1 - historyIndex];
-      inputDisplay.textContent = this.value; updateGhost();
+      renderInput(this.value); updateGhost();
     }
     return;
   }
@@ -412,15 +422,15 @@ cmdInput.addEventListener('keydown', function(e) {
     if (historyIndex > 0) {
       historyIndex--;
       this.value = commandHistory[commandHistory.length - 1 - historyIndex];
-      inputDisplay.textContent = this.value; updateGhost();
-    } else { historyIndex = -1; this.value = ''; inputDisplay.textContent = ''; updateGhost(); }
+      renderInput(this.value); updateGhost();
+    } else { historyIndex = -1; this.value = ''; renderInput(''); updateGhost(); }
     return;
   }
   if (e.key === 'Enter') {
     // collapse repeated spaces — a real shell does not care how many you
     // typed, and split(' ')[1] used to return empty on a double space
     const cmd = this.value.trim().toLowerCase().replace(/\s+/g, ' ');
-    this.value = ''; inputDisplay.textContent = ''; updateGhost();
+    this.value = ''; renderInput(''); updateGhost();
     if (cmd) commandHistory.push(cmd);
     historyIndex = -1;
     addCommandToHistory(cmd);
@@ -1387,6 +1397,159 @@ function buildVCardName() {
   return a.user || 'Rishant Shukla';
 }
 
+// ─── INPUT SYNTAX HIGHLIGHTING ────────────────────────────────────────────────
+// What a modern shell does as you type: the command turns green when it is real
+// and red when it is not, before you press Enter. #input-display already mirrors
+// the value, so this only changes how that mirror is painted.
+
+const SX_PREFIX = ['cat', 'cd', 'grep', 'theme', 'ask', 'split', 'echo', 'ping', 'sudo',
+                   'ls', 'docker', 'kubectl', 'terraform'];
+
+function sxKnown(segment, stage) {
+  const seg = segment.trim().toLowerCase().replace(/\s+/g, ' ');
+  if (!seg) return null;
+  const head = seg.split(' ')[0];
+  // after a pipe, only the filters are real commands
+  if (stage > 0) return Object.prototype.hasOwnProperty.call(PIPE_FILTERS, head);
+  if (availableCommands.includes(seg)) return true;
+  if (SX_PREFIX.includes(head)) return true;
+  if (availableCommands.includes(head)) return true;
+  return false;
+}
+
+function sxSegment(raw, stage) {
+  const known = sxKnown(raw, stage);
+  const lead = raw.match(/^\s*/)[0];
+  const body = raw.slice(lead.length);
+  if (!body) return escapeHTML(raw);
+
+  const parts = body.split(/(\s+)/);
+  let seenCmd = false;
+  const html = parts.map(tok => {
+    if (/^\s+$/.test(tok)) return tok;
+    if (!seenCmd) {
+      seenCmd = true;
+      return `<span class="${known === false ? 'sx-bad' : 'sx-cmd'}">${escapeHTML(tok)}</span>`;
+    }
+    if (/^-/.test(tok))        return `<span class="sx-flag">${escapeHTML(tok)}</span>`;
+    if (/^["'].*["']$/.test(tok)) return `<span class="sx-str">${escapeHTML(tok)}</span>`;
+    if (/[/.]/.test(tok))      return `<span class="sx-path">${escapeHTML(tok)}</span>`;
+    return `<span class="sx-arg">${escapeHTML(tok)}</span>`;
+  }).join('');
+  return escapeHTML(lead) + html;
+}
+
+function sxHighlight(value) {
+  if (!value) return '';
+  return value.split('|')
+    .map((seg, i) => sxSegment(seg, i))
+    .join('<span class="sx-pipe">|</span>');
+}
+
+function renderInput(value) {
+  inputDisplay.innerHTML = sxHighlight(value);
+}
+
+// ─── SPLIT ────────────────────────────────────────────────────────────────────
+// `split skills experience` — two sections side by side with a draggable
+// divider, the way you would actually read them when comparing.
+
+function splitPane(rawCmd) {
+  const cmd = canonical(rawCmd.trim().toLowerCase().replace(/\s+/g, ' '));
+  if (SEARCHABLE[cmd]) {
+    const tpl = document.getElementById(SEARCHABLE[cmd]);
+    return tpl ? { title: cmd, html: tpl.innerHTML } : null;
+  }
+  if (cmd.startsWith('cat ')) {
+    const study = resolveCaseStudy(cmd.slice(4));
+    if (study) {
+      const tpl = document.getElementById(CASE_STUDIES[study].tpl);
+      return tpl ? { title: 'projects/' + study, html: tpl.innerHTML } : null;
+    }
+  }
+  const study = resolveCaseStudy(cmd);
+  if (study) {
+    const tpl = document.getElementById(CASE_STUDIES[study].tpl);
+    return tpl ? { title: 'projects/' + study, html: tpl.innerHTML } : null;
+  }
+  return null;
+}
+
+function splitUsage(err) {
+  addToHistory(
+    (err ? `<div style="color:var(--red);">${err}</div>` : '') +
+    `<div style="color:var(--fg-dim);font-size:12px;margin-top:6px;">` +
+    `// usage: split &lt;left&gt; &lt;right&gt; — e.g. ` +
+    `<span class="clickable-cmd" data-cmd="split skills experience">split skills experience</span>, ` +
+    `<span class="clickable-cmd" data-cmd="split aws-sso kubespray">split aws-sso kubespray</span><br>` +
+    `// panes: about, experience, skills, projects, certs, education, status, contact, ` +
+    `and any case study</div>`);
+}
+
+function runSplit(arg) {
+  const parts = arg.trim().split(/\s+/).filter(Boolean);
+  if (parts.length !== 2) {
+    splitUsage(parts.length ? `split: need exactly two panes, got ${parts.length}` : '');
+    return;
+  }
+  const [l, r] = parts.map(splitPane);
+  if (!l) { splitUsage(`split: ${escapeHTML(parts[0])}: cannot open in a pane`); return; }
+  if (!r) { splitUsage(`split: ${escapeHTML(parts[1])}: cannot open in a pane`); return; }
+
+  addToHistory(
+    `<div class="split-wrap">` +
+      `<div class="split-pane" style="flex:1 1 50%">` +
+        `<div class="split-head"><span class="split-dot"></span>${escapeHTML(l.title)}</div>` +
+        `<div class="split-body">${l.html}</div></div>` +
+      `<div class="split-bar" role="separator" aria-orientation="vertical" tabindex="0" ` +
+           `aria-label="Resize panes — use the left and right arrow keys"></div>` +
+      `<div class="split-pane" style="flex:1 1 50%">` +
+        `<div class="split-head"><span class="split-dot"></span>${escapeHTML(r.title)}</div>` +
+        `<div class="split-body">${r.html}</div></div>` +
+    `</div>`);
+}
+
+// One delegated handler for every split that will ever be rendered.
+(function splitResize() {
+  function sizer(bar) {
+    const wrap = bar.parentElement;
+    const [a, b] = wrap.querySelectorAll(':scope > .split-pane');
+    return { wrap, a, b };
+  }
+  function setRatio(bar, pct) {
+    const { a, b } = sizer(bar);
+    const p = Math.min(80, Math.max(20, pct));
+    a.style.flex = `1 1 ${p}%`;
+    b.style.flex = `1 1 ${100 - p}%`;
+  }
+  document.addEventListener('pointerdown', e => {
+    const bar = e.target.closest('.split-bar');
+    if (!bar || window.innerWidth <= 700) return;
+    e.preventDefault();
+    const { wrap } = sizer(bar);
+    const move = ev => {
+      const r = wrap.getBoundingClientRect();
+      setRatio(bar, ((ev.clientX - r.left) / r.width) * 100);
+    };
+    const stop = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', stop);
+      document.body.classList.remove('split-dragging');
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', stop);
+    document.body.classList.add('split-dragging');
+  });
+  document.addEventListener('keydown', e => {
+    const bar = e.target.closest?.('.split-bar');
+    if (!bar || !['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+    e.preventDefault();
+    const { wrap, a } = sizer(bar);
+    const cur = (a.getBoundingClientRect().width / wrap.getBoundingClientRect().width) * 100;
+    setRatio(bar, cur + (e.key === 'ArrowRight' ? 6 : -6));
+  });
+})();
+
 // ─── PIPES ────────────────────────────────────────────────────────────────────
 // `skills | grep aws`, `experience | grep terraform | head -3`. The left side
 // produces lines, each filter transforms them. Sources read the same templates
@@ -1786,7 +1949,9 @@ function processCommand(cmd) {
     case '': break;
     default: {
       const safeCmd = escapeHTML(cmd);
-      if (cmd === 'vcard' || cmd === 'vcf' || cmd === 'contact --save') {
+      if (cmd === 'split' || cmd.startsWith('split ')) {
+        runSplit(cmd.slice(5));
+      } else if (cmd === 'vcard' || cmd === 'vcf' || cmd === 'contact --save') {
         runVCard();
       } else if (cmd.includes('|')) {
         runPipeline(cmd);
@@ -2333,10 +2498,263 @@ if (chatFab && chatPanel) {
 
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && chatIsOpen()) { e.preventDefault(); chatShut(); return; }
-    // Ctrl/Cmd+K from anywhere, including while typing in the terminal.
-    if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k') {
-      e.preventDefault();
-      chatIsOpen() ? chatShut() : chatOpen();
-    }
+    // Ctrl/Cmd+K belongs to the command palette now; the panel has the
+    // launcher, and "Ask …" is an entry in the palette itself.
   });
 }
+
+// ─── WINDOW CHROME ────────────────────────────────────────────────────────────
+// The three dots were decorative. Green maximises, yellow minimises to the title
+// bar, red does the only honest thing a portfolio can do when asked to close.
+(function windowChrome() {
+  const win = document.getElementById('terminal-window');
+  const bar = document.getElementById('title-bar');
+  if (!win || !bar) return;
+
+  let hint;
+  const clearHint = () => { hint?.remove(); hint = null; };
+
+  function showHint(text) {
+    clearHint();
+    hint = document.createElement('div');
+    hint.className = 'win-restore-hint';
+    hint.textContent = text;
+    document.body.appendChild(hint);
+  }
+
+  function restore() {
+    win.classList.remove('win-max', 'win-min');
+    clearHint();
+    setLabels();
+  }
+
+  function setLabels() {
+    const max = win.classList.contains('win-max');
+    const min = win.classList.contains('win-min');
+    bar.querySelector('[data-win="maximise"]')?.setAttribute('aria-label',
+      max ? 'Restore the window' : 'Maximise the window');
+    bar.querySelector('[data-win="minimise"]')?.setAttribute('aria-label',
+      min ? 'Restore the window' : 'Minimise the window');
+  }
+
+  bar.addEventListener('click', e => {
+    const btn = e.target.closest('[data-win]');
+    if (!btn) return;
+    const action = btn.dataset.win;
+
+    if (action === 'maximise') {
+      win.classList.remove('win-min');
+      win.classList.toggle('win-max');
+      clearHint();
+    } else if (action === 'minimise') {
+      win.classList.remove('win-max');
+      const min = win.classList.toggle('win-min');
+      if (min) showHint('Minimised — click the title bar to restore');
+      else clearHint();
+    } else if (action === 'close') {
+      addToHistory(
+        `<div style="color:var(--red);">Connection to rishant@devops closed by remote host.</div>` +
+        `<div style="color:var(--fg-dim);margin-top:6px;">… just kidding. ` +
+        `This one has been running for ${careerExperience()} and is not going down today.</div>` +
+        `<div style="color:var(--fg-dim);font-size:12px;margin-top:8px;">// if you really want to leave, ` +
+        `<span class="clickable-cmd" data-cmd="contact">contact</span> first.</div>`);
+      win.animate(
+        [{ transform: 'translate(-50%,-50%) scale(1)' },
+         { transform: 'translate(-50%,-50%) scale(0.985)' },
+         { transform: 'translate(-50%,-50%) scale(1)' }],
+        { duration: 260, easing: 'cubic-bezier(0.22,1,0.36,1)' });
+    }
+    setLabels();
+    if (!win.classList.contains('win-min')) cmdInput?.focus();
+  });
+
+  // A minimised window is just a title bar, so clicking it anywhere restores.
+  bar.addEventListener('click', e => {
+    if (win.classList.contains('win-min') && !e.target.closest('[data-win]')) restore();
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && (win.classList.contains('win-max') || win.classList.contains('win-min'))) {
+      restore();
+    }
+  });
+})();
+
+// ─── COMMAND PALETTE ──────────────────────────────────────────────────────────
+// Ctrl/Cmd+K. Fuzzy search over everything the terminal can do, grouped, with
+// the last few commands offered first when the query is empty.
+(function palette() {
+  const root  = document.getElementById('palette');
+  const input = document.getElementById('pal-input');
+  const list  = document.getElementById('pal-list');
+  if (!root || !input || !list) return;
+
+  const ITEMS = [
+    ['Section', '👤', 'About',            'whoami'],
+    ['Section', '💼', 'Experience',       'experience'],
+    ['Section', '🛠', 'Skills',           'skills'],
+    ['Section', '📦', 'Projects',         'projects'],
+    ['Section', '🏅', 'Certifications',   'certs'],
+    ['Section', '🎓', 'Education',        'education'],
+    ['Section', '🟢', 'Availability',     'status'],
+    ['Section', '✉️', 'Contact',          'contact'],
+    ['Section', '📄', 'Résumé (PDF)',     'resume'],
+    ['Case study', '📘', 'AWS Multi-Account Org & SSO',  'cat projects/aws-sso.md'],
+    ['Case study', '📘', 'ShopfloorGPT on AKS',          'cat projects/shopfloorgpt.md'],
+    ['Case study', '📘', 'Kubeadm → Kubespray Migration','cat projects/kubespray.md'],
+    ['Terminal', '🔍', 'Search everything',        'grep kubernetes'],
+    ['Terminal', '📁', 'List files',               'ls'],
+    ['Terminal', '📂', 'List case studies',        'ls projects'],
+    ['Terminal', '🔗', 'Pipe a section',           'skills | grep aws'],
+    ['Terminal', '💾', 'Save contact card (.vcf)', 'vcard'],
+    ['Terminal', '📖', 'Read the README',          'cat readme'],
+    ['Terminal', '❓', 'All commands',             'help'],
+    ['Terminal', '🧹', 'Clear the terminal',       'clear'],
+    ['Link', '🔗', 'GitHub profile',   'github'],
+    ['Link', '🔗', 'LinkedIn profile', 'linkedin'],
+    ['Fun', '🚀', 'Run the deploy pipeline', 'deploy'],
+    ['Fun', '😄', 'Random DevOps joke',      'joke'],
+    ['Fun', '💬', 'Tech quote',              'quote'],
+    ['Fun', '🟩', 'Matrix mode',             'm'],
+    ...THEMES.map(t => ['Theme', '🎨', `Theme — ${t}`, `theme ${t}`]),
+  ].map(([group, ico, label, cmd]) => ({ group, ico, label, cmd }));
+
+  // Subsequence match, biased towards word starts, so "ckm" finds
+  // "Kubeadm → Kubespray Migration" but an exact prefix still wins.
+  function score(hay, needle) {
+    const h = hay.toLowerCase(), n = needle.toLowerCase();
+    if (!n) return 1;
+    const idx = h.indexOf(n);
+    if (idx === 0) return 1000;
+    if (idx > 0)   return 700 - idx + (/\W/.test(h[idx - 1] || '') ? 60 : 0);
+    let i = 0, s = 0, prevEnd = -2;
+    const marks = [];
+    for (let j = 0; j < h.length && i < n.length; j++) {
+      if (h[j] !== n[i]) continue;
+      s += (j === prevEnd + 1) ? 14 : 5;
+      if (j === 0 || /\W/.test(h[j - 1])) s += 18;
+      marks.push(j); prevEnd = j; i++;
+    }
+    return i === n.length ? s : -1;
+  }
+
+  const mark = (text, needle) => {
+    const i = text.toLowerCase().indexOf(needle.toLowerCase());
+    if (!needle || i < 0) return escapeHTML(text);
+    return escapeHTML(text.slice(0, i)) +
+           `<span class="pal-hit">${escapeHTML(text.slice(i, i + needle.length))}</span>` +
+           escapeHTML(text.slice(i + needle.length));
+  };
+
+  let rows = [], cursor = 0;
+
+  function build(q) {
+    const query = q.trim();
+    let hits;
+    if (!query) {
+      // the last few things actually run, then everything
+      const recent = [...new Set(commandHistory.slice().reverse())].slice(0, 4)
+        .map(c => ITEMS.find(it => it.cmd === c)).filter(Boolean)
+        .map(it => ({ ...it, group: 'Recent' }));
+      const rest = ITEMS.filter(it => !recent.some(r => r.cmd === it.cmd));
+      hits = [...recent, ...rest];
+    } else {
+      hits = ITEMS
+        .map(it => ({ it, s: Math.max(score(it.label, query), score(it.cmd, query) - 40) }))
+        .filter(x => x.s > 0)
+        .sort((a, b) => b.s - a.s)
+        .map(x => x.it);
+    }
+
+    // A question is always a valid thing to do, so offer it rather than
+    // showing nothing when the query matches no command.
+    if (query && !/^[a-z]+$/i.test(query) || (query && hits.length === 0)) {
+      hits = [...hits, { group: 'Ask', ico: '💬', label: `Ask “${query}”`, cmd: `ask ${query}` }];
+    }
+
+    rows = hits;
+    cursor = 0;
+    render(query);
+  }
+
+  function render(query) {
+    if (!rows.length) {
+      list.innerHTML = `<div class="pal-empty">Nothing matches that.</div>`;
+      return;
+    }
+    let html = '', seen = null;
+    rows.forEach((it, i) => {
+      if (it.group !== seen) { html += `<div class="pal-group">${it.group}</div>`; seen = it.group; }
+      html += `<div class="pal-item" role="option" id="pal-opt-${i}" data-i="${i}" ` +
+              `aria-selected="${i === cursor}">` +
+              `<span class="pal-ico">${it.ico}</span>` +
+              `<span class="pal-label">${mark(it.label, query)}</span>` +
+              `<span class="pal-sub">${escapeHTML(it.cmd)}</span>` +
+              `<span class="pal-run">run ↵</span></div>`;
+    });
+    list.innerHTML = html;
+    input.setAttribute('aria-activedescendant', `pal-opt-${cursor}`);
+  }
+
+  function move(step) {
+    if (!rows.length) return;
+    cursor = (cursor + step + rows.length) % rows.length;
+    list.querySelectorAll('.pal-item').forEach(el => {
+      const on = +el.dataset.i === cursor;
+      el.setAttribute('aria-selected', on);
+      if (on) el.scrollIntoView({ block: 'nearest' });
+    });
+    input.setAttribute('aria-activedescendant', `pal-opt-${cursor}`);
+  }
+
+  const isOpen = () => !root.classList.contains('pal-hidden');
+
+  function open() {
+    root.classList.remove('pal-hidden');
+    input.value = '';
+    build('');
+    setTimeout(() => input.focus(), 40);
+  }
+
+  function close(refocus = true) {
+    root.classList.add('pal-hidden');
+    if (refocus && !isBooting) cmdInput?.focus();
+  }
+
+  function pick(i) {
+    const it = rows[i];
+    if (!it) return;
+    close(false);
+    runCommandClick(it.cmd, 'palette');
+  }
+
+  input.addEventListener('input', () => build(input.value));
+  list.addEventListener('click', e => {
+    const el = e.target.closest('.pal-item');
+    if (el) pick(+el.dataset.i);
+  });
+  list.addEventListener('mousemove', e => {
+    const el = e.target.closest('.pal-item');
+    if (el && +el.dataset.i !== cursor) { cursor = +el.dataset.i; render(input.value.trim()); }
+  });
+  root.addEventListener('mousedown', e => { if (e.target === root) close(); });
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); move(1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
+    else if (e.key === 'Enter')  { e.preventDefault(); pick(cursor); }
+    else if (e.key === 'Escape') { e.preventDefault(); close(); }
+    else if (e.key === 'Tab')    { e.preventDefault(); move(e.shiftKey ? -1 : 1); }
+  });
+
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      isOpen() ? close() : open();
+    }
+  }, true);
+
+  window.paletteOpen  = open;
+  window.paletteClose = close;
+  window.paletteIsOpen = isOpen;
+})();

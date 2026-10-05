@@ -1,3 +1,18 @@
+/* ── TYPEFACE ─────────────────────────────────────────────────────────────── */
+/* Self-hosted so there is no third-party request, no layout shift and nothing
+   to break if a CDN does. Courier New was the browser default rather than a
+   choice, and it set every character on the page. */
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('../fonts/jetbrains-mono-400.woff2') format('woff2');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('../fonts/jetbrains-mono-700.woff2') format('woff2');
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+
 /* ── RESET ────────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -43,7 +58,7 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--fg);
-  font-family: 'Courier New', Courier, monospace;
+  font-family: 'JetBrains Mono', 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace;
   cursor: auto;
 }
 .noscript-fallback h2 { color: var(--green); margin-bottom: 12px; }
@@ -73,7 +88,11 @@
   --purple:      #bb9af7;
   --cyan:        #7dcfff;
   --page-bg:     #050508;
-  --font:        'Courier New', Courier, monospace;
+  --font:        'JetBrains Mono', 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace;
+  /* Default easing is what makes motion read as cheap. These are the two
+     curves everything on the page now uses. */
+  --ease:     cubic-bezier(0.22, 1, 0.36, 1);   /* settle: UI arriving      */
+  --ease-out: cubic-bezier(0.4, 0, 0.2, 1);     /* travel: hover, colour    */
 }
 
 :root[data-theme="dracula"] {
@@ -200,7 +219,7 @@ body.matrix-mode #nav-links button:hover { color: #00ff41 !important; background
   box-shadow:
     0 0 0 1px rgba(255,255,255,0.04),
     0 24px 80px rgba(0,0,0,0.9);
-  transition: border-color 0.3s, box-shadow 0.3s;
+  transition: border-color 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
 }
 
 /* Animated gradient border */
@@ -308,7 +327,7 @@ body.matrix-mode #nav-links button:hover { color: #00ff41 !important; background
   padding: 4px 10px;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s var(--ease-out), border-color 0.15s var(--ease-out);
 }
 #availability:hover {
   background: rgba(158,206,106,0.16);
@@ -342,7 +361,7 @@ body.matrix-mode #nav-links button:hover { color: #00ff41 !important; background
   padding: 3px;
   cursor: pointer;
   vertical-align: middle;
-  transition: color 0.15s, background 0.15s;
+  transition: color 0.15s var(--ease-out), background 0.15s var(--ease-out);
 }
 .copy-btn:hover { color: var(--blue); background: rgba(125,207,255,0.12); }
 .copy-btn.copied { color: var(--green); }
@@ -358,11 +377,42 @@ body.matrix-mode #nav-links button:hover { color: #00ff41 !important; background
   width: 13px; height: 13px;
   border-radius: 50%;
   display: inline-block;
-  transition: transform 0.15s, filter 0.15s;
+  border: 0; padding: 0; cursor: pointer;
+  transition: transform 0.15s var(--ease-out), filter 0.15s var(--ease-out);
 }
 .tb-red    { background: #ff5f57; box-shadow: 0 0 6px rgba(255,95,87,0.7); }
 .tb-yellow { background: #febc2e; box-shadow: 0 0 6px rgba(254,188,46,0.7); }
 .tb-green  { background: #28c840; box-shadow: 0 0 6px rgba(40,200,64,0.7); }
+.tb-dot:hover { transform: scale(1.18); filter: brightness(1.15); }
+.tb-dot:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+/* ── WINDOW STATES ────────────────────────────────────────────────────────── */
+#terminal-window.win-max {
+  width: 100vw; height: 100vh; height: 100dvh;
+  border-radius: 0;
+  transition: width .34s var(--ease), height .34s var(--ease), border-radius .34s var(--ease);
+}
+#terminal-window.win-min {
+  height: 38px;
+  transition: height .32s var(--ease);
+}
+#terminal-window.win-min #nav-links,
+#terminal-window.win-min #terminal { display: none; }
+#terminal-window:not(.win-max):not(.win-min) {
+  transition: width .34s var(--ease), height .34s var(--ease),
+              border-radius .34s var(--ease),
+              border-color .3s var(--ease-out), box-shadow .3s var(--ease-out);
+}
+.win-restore-hint {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  top: 46px; z-index: 11;
+  color: var(--fg-dim); font-size: 12px;
+  background: var(--bg3); border: 1px solid var(--border);
+  padding: 5px 12px; border-radius: 6px;
+}
+@media (prefers-reduced-motion: reduce) {
+  #terminal-window, #terminal-window.win-max, #terminal-window.win-min { transition: none; }
+}
 .tb-dot:hover { transform: scale(1.2); filter: brightness(1.3); }
 
 /* ── NAV TAB BAR ──────────────────────────────────────────────────────────── */
@@ -393,7 +443,7 @@ body.matrix-mode #nav-links button:hover { color: #00ff41 !important; background
   border-radius: 4px;
   cursor: pointer;
   white-space: nowrap;
-  transition: color 0.15s, background 0.15s;
+  transition: color 0.15s var(--ease-out), background 0.15s var(--ease-out);
 }
 #nav-links a:hover,
 #nav-links button:hover { color: var(--blue); background: var(--bg4); }
@@ -452,6 +502,20 @@ body.matrix-mode #nav-links button:hover { color: #00ff41 !important; background
 #real-prompt { position: relative; }
 #real-prompt.hidden { display: none; }
 #input-display { color: var(--fg); }
+/* live command-line highlighting, the way a modern shell colours as you type */
+.sx-cmd  { color: var(--green); }
+.sx-bad  { color: var(--red); text-decoration: underline wavy var(--red); text-underline-offset: 3px; }
+/* Nord and Gruvbox use a desaturated red that falls under 4.5:1 against the
+   terminal. Lifting it toward the bright foreground keeps the hue and the
+   legibility of the signal that a command is not real. */
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  .sx-bad { color: color-mix(in srgb, var(--red) 64%, var(--fg-bright)); }
+}
+.sx-flag { color: var(--purple); }
+.sx-str  { color: var(--yellow); }
+.sx-path { color: var(--blue); }
+.sx-arg  { color: var(--fg); }
+.sx-pipe { color: var(--cyan); font-weight: bold; }
 
 /* ── TYPING CURSOR ────────────────────────────────────────────────────────── */
 .typing-cursor {
@@ -602,7 +666,7 @@ body.matrix-mode #nav-links button:hover { color: #00ff41 !important; background
   padding: 1px 8px;
   border-radius: 3px;
   font-size: 12px;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s var(--ease-out);
 }
 .tree-item:hover { border-color: var(--blue); }
 
@@ -625,7 +689,7 @@ body.matrix-mode #nav-links button:hover { color: #00ff41 !important; background
   border-radius: 6px;
   padding: 16px;
   cursor: pointer;
-  transition: border-color 0.2s, transform 0.2s;
+  transition: border-color 0.2s var(--ease-out), transform 0.2s var(--ease-out);
 }
 .project-card:hover { border-color: var(--blue); transform: translateY(-2px); }
 .proj-header {
@@ -660,7 +724,7 @@ body.matrix-mode #nav-links button:hover { color: #00ff41 !important; background
   border-radius: 6px;
   border: 1px solid transparent;
   text-decoration: none;
-  transition: background 0.12s, border-color 0.12s;
+  transition: background 0.12s var(--ease-out), border-color 0.12s var(--ease-out);
   cursor: pointer;
 }
 a.cert-item:hover {
@@ -697,7 +761,7 @@ a.cert-item:hover .cert-name { color: var(--blue); }
   font-size: 13px;
   padding: 8px 12px;
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s var(--ease-out);
   resize: vertical;
 }
 .contact-form input::placeholder,
@@ -713,7 +777,7 @@ a.cert-item:hover .cert-name { color: var(--blue); }
   padding: 8px 16px;
   border-radius: 4px;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s var(--ease-out), color 0.15s var(--ease-out);
   align-self: flex-start;
 }
 .contact-form button:hover { background: var(--green); color: var(--bg); }
@@ -877,6 +941,17 @@ a.cert-item:hover .cert-name { color: var(--blue); }
   overflow: hidden; z-index: 301;
   transition: opacity .16s ease, transform .16s ease;
 }
+/* Frosted, so the terminal reads through the panel instead of being hidden by
+   it. Solid background above stays as the fallback where blur is unsupported. */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  #chat-panel {
+    background: color-mix(in srgb, var(--bg) 78%, transparent);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    backdrop-filter: blur(14px) saturate(140%);
+  }
+  #chat-head, #chat-form { background: color-mix(in srgb, var(--bg2) 70%, transparent); }
+}
+
 #chat-panel.chat-hidden {
   opacity: 0; transform: translateY(10px) scale(.98);
   pointer-events: none; visibility: hidden;
@@ -1067,4 +1142,143 @@ body.chat-resizing #chat-panel { transition: none; }
   /* The blinking caret is the one animation worth keeping, but slow it right
      down so it reads as a caret rather than a strobe */
   .typing-cursor { animation-duration: 1.5s !important; }
+}
+
+
+/* ── THEME TRANSITION ─────────────────────────────────────────────────────── */
+/* Scoped to the ~350ms a switch takes. A permanent global transition would
+   fight every other animation on the page. */
+:root.theme-switching,
+:root.theme-switching *:not(#particles-js):not(#particles-js *) {
+  transition: background-color .34s var(--ease-out),
+              border-color     .34s var(--ease-out),
+              color            .34s var(--ease-out),
+              box-shadow       .34s var(--ease-out) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root.theme-switching, :root.theme-switching * { transition: none !important; }
+}
+
+
+/* ── COMMAND PALETTE ──────────────────────────────────────────────────────── */
+#palette {
+  position: fixed; inset: 0; z-index: 400;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-top: min(14vh, 120px);
+  background: rgba(0,0,0,0.5);
+  transition: opacity .18s var(--ease-out);
+}
+@supports (backdrop-filter: blur(1px)) {
+  #palette { -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+}
+#palette.pal-hidden { opacity: 0; pointer-events: none; visibility: hidden; }
+
+#pal-box {
+  width: min(620px, 92vw);
+  max-height: min(60vh, 520px);
+  display: flex; flex-direction: column;
+  background: var(--bg2);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  box-shadow: 0 24px 70px rgba(0,0,0,0.65);
+  overflow: hidden;
+  transform: translateY(0) scale(1);
+  transition: transform .2s var(--ease);
+}
+#palette.pal-hidden #pal-box { transform: translateY(-8px) scale(.985); }
+@supports (backdrop-filter: blur(1px)) {
+  #pal-box {
+    background: color-mix(in srgb, var(--bg2) 86%, transparent);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    backdrop-filter: blur(18px) saturate(150%);
+  }
+}
+
+#pal-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 13px 16px; flex: none;
+  border-bottom: 1px solid var(--border);
+}
+#pal-prompt { color: var(--green); font-size: 15px; }
+#pal-input {
+  flex: 1; background: none; border: 0; outline: none;
+  color: var(--fg-bright); font-family: var(--font); font-size: 14px;
+}
+#pal-input::placeholder { color: var(--fg-dim); }
+.pal-kbd {
+  color: var(--fg-dim); font-size: 10px; letter-spacing: .5px;
+  border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; flex: none;
+}
+
+#pal-list { flex: 1; overflow-y: auto; padding: 6px; }
+#pal-list::-webkit-scrollbar { width: 4px; }
+#pal-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+
+.pal-group {
+  /* --fg-dim alone lands at 2.97:1 on tokyo-night; nudged toward --fg */
+  color: var(--fg-dim); font-size: 10px; letter-spacing: 1px;
+  text-transform: uppercase; padding: 10px 10px 5px;
+}
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  .pal-group { color: color-mix(in srgb, var(--fg-dim) 55%, var(--fg)); }
+}
+.pal-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 9px 11px; border-radius: 7px; cursor: pointer;
+  color: var(--fg); font-size: 13px;
+}
+.pal-item[aria-selected="true"] { background: var(--bg4, var(--border)); color: var(--fg-bright); }
+.pal-item[aria-selected="true"] .pal-run { opacity: 1; }
+.pal-ico   { flex: none; width: 17px; text-align: center; opacity: .85; }
+.pal-label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pal-sub   { color: var(--fg-dim); font-size: 11px; flex: none; }
+.pal-run   { color: var(--green); font-size: 11px; opacity: 0; flex: none; }
+.pal-hit   { color: var(--yellow); font-weight: bold; }
+.pal-empty { color: var(--fg-dim); font-size: 13px; padding: 22px 12px; text-align: center; }
+
+#pal-foot {
+  display: flex; gap: 16px; flex: none;
+  padding: 9px 16px; border-top: 1px solid var(--border);
+  color: var(--fg-dim); font-size: 11px;
+}
+#pal-foot b { color: var(--fg); font-weight: normal; }
+
+@media (max-width: 600px) {
+  #palette { padding-top: 8vh; }
+  #pal-foot { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #palette, #pal-box { transition: none; }
+}
+
+
+/* ── SPLIT PANES ──────────────────────────────────────────────────────────── */
+.split-wrap {
+  display: flex; align-items: stretch;
+  border: 1px solid var(--border); border-radius: 8px;
+  overflow: hidden; background: var(--bg2);
+}
+.split-pane { display: flex; flex-direction: column; min-width: 0; }
+.split-head {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 12px; flex: none;
+  background: var(--bg3); border-bottom: 1px solid var(--border);
+  color: var(--purple); font-size: 11px; letter-spacing: .5px;
+}
+.split-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); flex: none; }
+.split-body { padding: 14px; overflow: auto; max-height: 440px; font-size: 12.5px; }
+.split-body::-webkit-scrollbar { width: 4px; }
+.split-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+.split-bar {
+  flex: none; width: 5px; cursor: col-resize; background: var(--border);
+  transition: background .15s var(--ease-out);
+}
+.split-bar:hover, .split-bar:focus-visible { background: var(--green); outline: none; }
+body.split-dragging, body.split-dragging * { user-select: none; cursor: col-resize !important; }
+
+@media (max-width: 700px) {
+  .split-wrap { flex-direction: column; }
+  .split-pane { flex: 1 1 auto !important; }
+  .split-bar  { width: auto; height: 5px; cursor: default; }
+  .split-body { max-height: 300px; }
 }
