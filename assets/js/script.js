@@ -175,11 +175,20 @@ async function typeCommand(cmdText) {
 }
 
 async function getVisitorIP() {
+  // Bounded: this endpoint has been seen taking 6s and timing out at 10s, and
+  // privacy extensions block it outright. Nothing on the page should wait that
+  // long for a decorative line.
+  const ctl = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = ctl ? setTimeout(() => ctl.abort(), 2000) : null;
   try {
-    const r = await fetch('https://api.ipify.org?format=json');
+    const r = await fetch('https://api.ipify.org?format=json', ctl ? { signal: ctl.signal } : {});
     const d = await r.json();
-    return d.ip;
-  } catch { return '127.0.0.1'; }
+    return d.ip || '127.0.0.1';
+  } catch {
+    return '127.0.0.1';
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 // ─── DEPLOY PIPELINE ──────────────────────────────────────────────────────────
@@ -269,7 +278,6 @@ async function runIntro() {
   await typeText(aLine, 'Authenticating public key "rishant_rsa"...');
 
   await new Promise(r => setTimeout(r, 250));
-  const ip = await ipPromise; // by now the fetch has had the whole boot sequence to resolve in the background
   const motdDiv = document.createElement('div');
   motdDiv.className = 'motd-container fade-in';
   motdDiv.innerHTML = `
@@ -283,10 +291,17 @@ async function runIntro() {
       <span><span class="motd-key">Processes:</span> <span class="motd-val">${Math.floor(Math.random()*40+110)}</span></span>
       <span><span class="motd-key">IP:</span> <span class="motd-val">10.0.${Math.floor(Math.random()*3)}.${Math.floor(Math.random()*254+1)}</span></span>
     </div>
-    <span style="color:var(--fg-dim);font-size:12px;">Last login from <span style="color:var(--blue);">${ip}</span></span>
+    <span style="color:var(--fg-dim);font-size:12px;">Last login from <span class="motd-ip" style="color:var(--blue);">…</span></span>
     <hr style="border:0;border-bottom:1px solid var(--border);margin:10px 0 20px;">
   `;
   history.appendChild(motdDiv);
+  // Fill the address in whenever it arrives — or never. The animation carries
+  // on either way, which is what the original comment claimed but awaiting the
+  // promise here prevented: a slow lookup stalled the boot at this exact line.
+  ipPromise.then(ip => {
+    const slot = motdDiv.querySelector('.motd-ip');
+    if (slot) slot.textContent = ip;
+  }).catch(() => {});
   scrollToBottom();
 
   await new Promise(r => setTimeout(r, 300));
