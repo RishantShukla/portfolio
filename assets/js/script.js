@@ -327,6 +327,7 @@ async function runIntro() {
   realPrompt.classList.remove('hidden');
   cmdInput.focus();
   isBooting = false;
+  document.getElementById('terminal-window')?.classList.remove('booting');
   scrollToBottom();
 }
 
@@ -2945,19 +2946,24 @@ if (chatFab && chatPanel) {
 // browser's own — binding them would close someone's real tab — so switching is
 // Alt+number, and creating is the + button or the `tab` command.
 const tabBar = document.getElementById('tab-bar');
-let tabs = [{ title: 'main', html: '' }];
+let tabs = [{ html: '' }];
 let activeTab = 0;
-let tabSeq = 1;
+
+// Derived from position, not a counter. A monotonic sequence meant closing the
+// second session and opening another gave you "sh-3", and worse, the label was
+// a different number from the one Alt+N and `tab <n>` use. The label is now
+// always the index you switch to.
+const tabTitle = i => (i === 0 ? 'main' : `sh-${i + 1}`);
 
 function renderTabs() {
   if (!tabBar) return;
   tabBar.innerHTML = tabs.map((t, i) =>
     `<button type="button" class="tab" role="tab" data-tab="${i}" ` +
     `aria-selected="${i === activeTab}" ` +
-    `aria-label="Session ${escapeHTML(t.title)}${i === activeTab ? ', current' : ''}">` +
-    `<span>${escapeHTML(t.title)}</span>` +
+    `aria-label="Session ${tabTitle(i)}${i === activeTab ? ', current' : ''}">` +
+    `<span>${tabTitle(i)}</span>` +
     (tabs.length > 1
-      ? `<span class="tab-x" data-close="${i}" role="button" aria-label="Close ${escapeHTML(t.title)}">×</span>`
+      ? `<span class="tab-x" data-close="${i}" role="button" aria-label="Close ${tabTitle(i)}">×</span>`
       : '') +
     `</button>`
   ).join('') +
@@ -2965,6 +2971,7 @@ function renderTabs() {
 }
 
 function switchTab(i) {
+  if (isBooting) return;
   if (i === activeTab || i < 0 || i >= tabs.length) return;
   tabs[activeTab].html = history.innerHTML;
   activeTab = i;
@@ -2975,9 +2982,9 @@ function switchTab(i) {
 }
 
 function newTab() {
+  if (isBooting) return;
   tabs[activeTab].html = history.innerHTML;
-  tabSeq += 1;
-  tabs.push({ title: `sh-${tabSeq}`, html: '' });
+  tabs.push({ html: '' });
   activeTab = tabs.length - 1;
   history.innerHTML = '';
   renderTabs();
@@ -2990,6 +2997,7 @@ function newTab() {
 }
 
 function closeTab(i) {
+  if (isBooting) return;
   if (tabs.length === 1) { history.innerHTML = ''; tabs[0].html = ''; return; }
   if (i === activeTab) tabs[activeTab].html = history.innerHTML;
   tabs.splice(i, 1);
@@ -3008,7 +3016,7 @@ function runTab(arg) {
   if (a === 'list') {
     addToHistory(tabs.map((t, i) =>
       `<div style="color:var(--fg);">${i === activeTab ? '*' : ' '} ` +
-      `<span class="clickable-cmd" data-cmd="tab ${i + 1}">${i + 1}</span>  ${escapeHTML(t.title)}</div>`
+      `<span class="clickable-cmd" data-cmd="tab ${i + 1}">${i + 1}</span>  ${tabTitle(i)}</div>`
     ).join('') + `<div style="color:var(--fg-dim);font-size:12px;margin-top:8px;">// ` +
       `<span class="clickable-cmd" data-cmd="tab new">tab new</span>, ` +
       `<span class="clickable-cmd" data-cmd="tab close">tab close</span>, or Alt+1…9</div>`);
