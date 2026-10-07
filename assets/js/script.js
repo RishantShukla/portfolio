@@ -297,6 +297,8 @@ async function runIntro() {
   if (linked) {
     await typeCommand(linked);
     await new Promise(r => setTimeout(r, 120));
+    commandHistory.push(linked);
+    saveHistory();
     processCommand(linked);
     addToHistory(
       `<div style="color:var(--fg-dim);font-size:12px;">` +
@@ -2218,6 +2220,16 @@ async function runCommandClick(cmd, source = 'link') {
   await typeText(div.querySelector('.cmd'), cmd);
   await new Promise(r => setTimeout(r, 150));
   div.remove();
+  // A clicked command ran, so it belongs in history exactly like a typed one.
+  // Without this, `history`, `!!`, the up-arrow and the palette's Recent group
+  // are all empty for anyone who navigates by clicking — which is most people.
+  // The tour is the one exception: five entries per run would bury whatever
+  // the visitor actually did themselves.
+  if (cmd && source !== 'tour') {
+    commandHistory.push(cmd);
+    saveHistory();
+    historyIndex = -1;
+  }
   addCommandToHistory(cmd);
   processCommand(cmd);
   scrollToBottom();
