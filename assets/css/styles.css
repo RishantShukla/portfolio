@@ -1282,3 +1282,76 @@ body.split-dragging, body.split-dragging * { user-select: none; cursor: col-resi
   .split-bar  { width: auto; height: 5px; cursor: default; }
   .split-body { max-height: 300px; }
 }
+
+/* ── SHARE ────────────────────────────────────────────────────────────────── */
+.share-url {
+  margin-top: 8px; padding: 9px 12px;
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 6px;
+  color: var(--blue); font-size: 12px; word-break: break-all;
+}
+
+/* ── TOUR ─────────────────────────────────────────────────────────────────── */
+.tour-banner {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 13px; border-radius: 7px;
+  background: var(--bg3); border: 1px solid var(--border-soft);
+  color: var(--fg); font-size: 13px;
+}
+.tour-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--green); flex: none;
+  animation: tour-pulse 1.6s var(--ease-out) infinite;
+}
+@keyframes tour-pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+.tour-skip {
+  margin-left: auto; flex: none; cursor: pointer;
+  background: none; border: 1px solid var(--border-soft); border-radius: 5px;
+  color: var(--fg-dim); font-family: inherit; font-size: 11px; padding: 3px 10px;
+}
+.tour-skip:hover { color: var(--red); border-color: var(--red); }
+.tour-step { display: flex; gap: 10px; color: var(--fg-dim); font-size: 12.5px; }
+.tour-num  { color: var(--green); flex: none; }
+.tour-hint {
+  color: var(--fg-dim); font-size: 12.5px;
+  padding: 9px 13px; border-radius: 7px;
+  background: var(--bg3); border: 1px dashed var(--border-soft);
+}
+.tour-hint b { color: var(--fg); font-weight: normal; }
+@media (prefers-reduced-motion: reduce) { .tour-dot { animation: none; } }
+
+/* ── TABS ─────────────────────────────────────────────────────────────────── */
+#tab-bar {
+  display: flex; align-items: stretch; gap: 2px; flex: none;
+  padding: 0 6px; height: 30px;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  overflow-x: auto; scrollbar-width: none;
+}
+#tab-bar::-webkit-scrollbar { display: none; }
+.tab {
+  display: flex; align-items: center; gap: 7px;
+  padding: 0 10px; flex: none; cursor: pointer;
+  background: none; border: 0; border-bottom: 2px solid transparent;
+  color: var(--fg-dim); font-family: inherit; font-size: 11.5px;
+  transition: color .15s var(--ease-out), border-color .15s var(--ease-out);
+}
+.tab:hover { color: var(--fg); }
+.tab[aria-selected="true"] { color: var(--fg-bright); border-bottom-color: var(--green); }
+.tab:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+.tab-x {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; border-radius: 3px;
+  color: var(--fg-dim); font-size: 13px; line-height: 1;
+}
+.tab-x:hover { background: var(--border); color: var(--red); }
+#tab-new {
+  flex: none; margin-left: 2px; padding: 0 11px; cursor: pointer;
+  background: none; border: 0; color: var(--fg-dim);
+  font-family: inherit; font-size: 15px; line-height: 1;
+  transition: color .15s var(--ease-out);
+}
+#tab-new:hover { color: var(--green); }
+#tab-new:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+#terminal-window.win-min #tab-bar { display: none; }
+
+/* The boot sequence types into #history for a few seconds; swapping sessions
+   mid-flight would cut it in half, so the bar is inert until it finishes. */
+#terminal-window.booting #tab-bar { opacity: .35; pointer-events: none; }

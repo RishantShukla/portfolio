@@ -127,7 +127,7 @@
   <div id="cursor-outline" aria-hidden="true"></div>
 
   <!-- Full-screen terminal wrapper -->
-  <div id="terminal-window">
+  <div id="terminal-window" class="booting">
 
     <!-- Title Bar (macOS-style chrome) -->
     <div id="title-bar">
@@ -161,6 +161,8 @@
     </nav>
 
     <!-- Terminal Body -->
+    <div id="tab-bar" role="tablist" aria-label="Terminal sessions"></div>
+
     <div id="terminal">
       <div id="history"></div>
       <div id="real-prompt" class="prompt-line hidden">
@@ -199,9 +201,12 @@
       <table class="help-table">
         <tr><td class="ht-cmd clickable-cmd" data-cmd="ls">ls</td><td class="ht-dash">-</td><td class="ht-desc">List Directory Contents</td></tr>
         <tr><td class="ht-cmd clickable-cmd" data-cmd="grep kubernetes">grep &lt;term&gt;</td><td class="ht-dash">-</td><td class="ht-desc">Search Everything</td></tr>
+        <tr><td class="ht-cmd clickable-cmd" data-cmd="tour">tour</td><td class="ht-dash">-</td><td class="ht-desc">Guided 40-Second Walkthrough</td></tr>
         <tr><td class="ht-cmd clickable-cmd" data-cmd="ask does he know kubernetes?">ask &lt;question&gt;</td><td class="ht-dash">-</td><td class="ht-desc">Ask About His Work</td></tr>
+        <tr><td class="ht-cmd clickable-cmd" data-cmd="share skills">share &lt;cmd&gt;</td><td class="ht-dash">-</td><td class="ht-desc">Copy a Link That Runs It</td></tr>
         <tr><td class="ht-cmd clickable-cmd" data-cmd="skills | grep aws">&lt;cmd&gt; | grep &lt;term&gt;</td><td class="ht-dash">-</td><td class="ht-desc">Pipe a Section Through a Filter</td></tr>
         <tr><td class="ht-cmd clickable-cmd" data-cmd="split skills experience">split &lt;a&gt; &lt;b&gt;</td><td class="ht-dash">-</td><td class="ht-desc">Two Sections Side by Side</td></tr>
+        <tr><td class="ht-cmd clickable-cmd" data-cmd="tab list">tab</td><td class="ht-dash">-</td><td class="ht-desc">New Session / Switch / Close</td></tr>
         <tr><td class="ht-cmd clickable-cmd" data-cmd="ls projects">ls projects</td><td class="ht-dash">-</td><td class="ht-desc">List Case Studies</td></tr>
         <tr><td class="ht-cmd clickable-cmd" data-cmd="cd about">cd &lt;dir&gt;</td><td class="ht-dash">-</td><td class="ht-desc">Enter a Directory from ls</td></tr>
         <tr><td class="ht-cmd clickable-cmd" data-cmd="cat readme">cat readme</td><td class="ht-dash">-</td><td class="ht-desc">Read the README</td></tr>
@@ -236,11 +241,13 @@
         <tr><td class="ht-shortcut">Tab</td><td class="ht-dash">-</td><td class="ht-desc">Autocomplete command</td></tr>
         <tr><td class="ht-shortcut">→</td><td class="ht-dash">-</td><td class="ht-desc">Accept the inline suggestion</td></tr>
         <tr><td class="ht-shortcut">↑ / ↓</td><td class="ht-dash">-</td><td class="ht-desc">Navigate command history</td></tr>
+        <tr><td class="ht-shortcut">!! / !n</td><td class="ht-dash">-</td><td class="ht-desc">Repeat the last / nth command</td></tr>
         <tr><td class="ht-shortcut">Esc</td><td class="ht-dash">-</td><td class="ht-desc">Close the palette, panel or restore the window</td></tr>
         <tr><td class="ht-shortcut">Ctrl + L</td><td class="ht-dash">-</td><td class="ht-desc">Clear terminal</td></tr>
         <tr><td class="ht-shortcut">Ctrl + C</td><td class="ht-dash">-</td><td class="ht-desc">Cancel current input</td></tr>
         <tr><td class="ht-shortcut">m</td><td class="ht-dash">&nbsp;</td><td class="ht-desc">Toggle matrix mode (outside the input)</td></tr>
         <tr><td class="ht-shortcut">← / →</td><td class="ht-dash">-</td><td class="ht-desc">Resize split panes when the divider has focus</td></tr>
+        <tr><td class="ht-shortcut">Alt + 1…9</td><td class="ht-dash">-</td><td class="ht-desc">Switch terminal session</td></tr>
       </table>
     </div>
 

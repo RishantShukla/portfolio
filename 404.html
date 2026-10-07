@@ -3,141 +3,83 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>404 | Rishant Shukla</title>
+  <title>404 — command not found | Rishant Shukla</title>
+  <meta name="robots" content="noindex" />
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <link rel="preload" href="assets/fonts/jetbrains-mono-400.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- the real stylesheet, so this page gets the typeface and the theme the
+       visitor already chose instead of looking like a different site -->
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('portfolio-theme');
+        if (t && ['tokyo-night','dracula','gruvbox','nord','matrix'].indexOf(t) > -1) {
+          document.documentElement.setAttribute('data-theme', t);
+        }
+      } catch (e) {}
+    })();
+  </script>
   <style>
-    :root {
-      --bg: #1a1b26; --bg2: #16161e; --bg3: #1f2335; --border: #292e42;
-      --fg: #a9b1d6; --fg-dim: #565f89; --blue: #7dcfff; --green: #9ece6a; --red: #f7768e;
+    /* this page has no scrollback, so the window sizes to its content */
+    #terminal-window { height: auto; max-height: 92vh; }
+    #terminal { padding: 26px 28px 30px; }
+    .nf-line { color: var(--fg); font-size: 13.5px; line-height: 1.9; }
+    .nf-url  { color: var(--yellow); word-break: break-all; }
+    .nf-err  { color: var(--red); }
+    .nf-links { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px; }
+    .nf-links a {
+      color: var(--blue); text-decoration: none; font-size: 13px;
+      border: 1px solid var(--border); border-radius: 6px; padding: 7px 13px;
+      transition: border-color .15s var(--ease-out), color .15s var(--ease-out);
     }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body {
-      height: 100%;
-      background: #050508;
-      font-family: 'Courier New', Courier, monospace;
-      color: var(--fg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    #particles-js {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-    }
-    #window {
-      position: relative;
-      z-index: 10;
-      width: min(600px, 92vw);
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      box-shadow: 0 24px 80px rgba(0,0,0,0.6);
-      overflow: hidden;
-    }
-    #titlebar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 12px 16px;
-      background: var(--bg3);
-      border-bottom: 1px solid var(--border);
-    }
-    .dot { width: 12px; height: 12px; border-radius: 50%; }
-    .red { background: #ff5f57; } .yellow { background: #febc2e; } .green { background: #28c840; }
-    #titletext { flex: 1; text-align: center; color: var(--fg-dim); font-size: 13px; margin-right: 52px; }
-    #body { padding: 32px 28px; font-size: 15px; line-height: 1.9; }
-    .prompt { color: var(--green); }
-    .arrow { color: var(--blue); }
-    .cmd { color: var(--fg); }
-    .status { color: var(--red); font-weight: bold; }
-    .dim { color: var(--fg-dim); }
-    a { color: var(--blue); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .cursor {
-      display: inline-block; width: 9px; height: 17px;
-      background: var(--blue); vertical-align: -3px; margin-left: 2px;
-      animation: blink 1s step-end infinite;
-    }
-    @keyframes blink { 50% { opacity: 0; } }
-    .home-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 20px;
-      padding: 10px 18px;
-      background: var(--bg3);
-      border: 1px solid var(--blue);
-      border-radius: 6px;
-      color: var(--blue) !important;
-      font-size: 14px;
-      font-weight: bold;
-      text-decoration: none !important;
-      transition: background 0.15s, transform 0.15s;
-    }
-    .home-btn:hover { background: rgba(125,207,255,0.12); transform: translateY(-1px); }
+    .nf-links a:hover { border-color: var(--blue); color: var(--fg-bright); }
+    .nf-links a:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
   </style>
 </head>
 <body>
-  <div id="particles-js"></div>
-  <div id="window">
-    <div id="titlebar">
-      <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
-      <span id="titletext">rishant@devops: ~ (ssh)</span>
+  <div id="particles-js" aria-hidden="true"></div>
+
+  <div id="terminal-window">
+    <div id="title-bar">
+      <div id="title-bar-left">
+        <span class="tb-dot tb-red"></span>
+        <span class="tb-dot tb-yellow"></span>
+        <span class="tb-dot tb-green"></span>
+      </div>
+      <div id="title-bar-center">rishant@devops: ~ (ssh)</div>
+      <div id="title-bar-right"></div>
     </div>
-    <div id="body">
-      <div><span class="prompt">rishant</span><span class="dim">@</span><span class="arrow">devops</span> ➜ <span class="cmd">curl -I <span id="requested-url"></span></span></div>
-      <div>&nbsp;</div>
-      <div class="status">HTTP/1.1 404 Not Found</div>
-      <div class="dim">Error: The page you're looking for doesn't exist on this server.</div>
-      <div>&nbsp;</div>
-      <div><span class="prompt">rishant</span><span class="dim">@</span><span class="arrow">devops</span> ➜ <span class="cmd">cd ~</span><span class="cursor"></span></div>
-      <a href="/" class="home-btn">← Return to homepage</a>
+
+    <div id="terminal">
+      <h1 class="sr-only">404 — page not found</h1>
+
+      <div class="prompt-line">
+        <span class="user">rishant</span><span class="at">@</span><span class="host">devops</span><span class="arrow">➜</span>
+        <span class="cmd">cat <span class="nf-url" id="requested-path">…</span></span>
+      </div>
+      <div class="nf-line nf-err">cat: no such file or directory</div>
+      <div class="nf-line" style="color:var(--fg-dim);">HTTP/1.1 404 — that path is not part of this site.</div>
+
+      <div class="prompt-line" style="margin-top:18px;">
+        <span class="user">rishant</span><span class="at">@</span><span class="host">devops</span><span class="arrow">➜</span>
+        <span class="cmd">cd ~</span>
+      </div>
+
+      <nav class="nf-links" aria-label="Go back">
+        <a href="/">← back to the terminal</a>
+        <a href="/?run=whoami">about</a>
+        <a href="/?run=experience">experience</a>
+        <a href="/?run=ls+projects">case studies</a>
+        <a href="/?run=contact">contact</a>
+      </nav>
     </div>
   </div>
+
   <script>
-    document.getElementById('requested-url').textContent = window.location.href;
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
-  <script>
-    particlesJS('particles-js', {
-      particles: {
-        number: { value: 80, density: { enable: true, value_area: 800 } },
-        color: { value: '#7dcfff' },
-        shape: { type: 'circle' },
-        opacity: { value: 0.35, random: true, anim: { enable: false } },
-        size: { value: 2, random: true },
-        line_linked: {
-          enable: true,
-          distance: 150,
-          color: '#7dcfff',
-          opacity: 0.2,
-          width: 0.8
-        },
-        move: {
-          enable: true,
-          speed: 1.2,
-          direction: 'none',
-          random: true,
-          straight: false,
-          out_mode: 'out',
-          bounce: false
-        }
-      },
-      interactivity: {
-        detect_on: 'canvas',
-        events: {
-          onhover: { enable: true, mode: 'grab' },
-          onclick: { enable: true, mode: 'push' },
-          resize: true
-        },
-        modes: {
-          grab: { distance: 180, line_linked: { opacity: 0.9 } },
-          push: { particles_nb: 3 }
-        }
-      },
-      retina_detect: true
-    });
+    // show what they actually asked for, escaped by assigning to textContent
+    document.getElementById('requested-path').textContent =
+      location.pathname.slice(0, 120) + location.search.slice(0, 60);
   </script>
 </body>
 </html>

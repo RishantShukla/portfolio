@@ -175,11 +175,20 @@ async function typeCommand(cmdText) {
 }
 
 async function getVisitorIP() {
+  // Bounded: this endpoint has been seen taking 6s and timing out at 10s, and
+  // privacy extensions block it outright. Nothing on the page should wait that
+  // long for a decorative line.
+  const ctl = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = ctl ? setTimeout(() => ctl.abort(), 2000) : null;
   try {
-    const r = await fetch('https://api.ipify.org?format=json');
+    const r = await fetch('https://api.ipify.org?format=json', ctl ? { signal: ctl.signal } : {});
     const d = await r.json();
-    return d.ip;
-  } catch { return '127.0.0.1'; }
+    return d.ip || '127.0.0.1';
+  } catch {
+    return '127.0.0.1';
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 // ─── DEPLOY PIPELINE ──────────────────────────────────────────────────────────
@@ -269,7 +278,6 @@ async function runIntro() {
   await typeText(aLine, 'Authenticating public key "rishant_rsa"...');
 
   await new Promise(r => setTimeout(r, 250));
-  const ip = await ipPromise; // by now the fetch has had the whole boot sequence to resolve in the background
   const motdDiv = document.createElement('div');
   motdDiv.className = 'motd-container fade-in';
   motdDiv.innerHTML = `
@@ -283,20 +291,29 @@ async function runIntro() {
       <span><span class="motd-key">Processes:</span> <span class="motd-val">${Math.floor(Math.random()*40+110)}</span></span>
       <span><span class="motd-key">IP:</span> <span class="motd-val">10.0.${Math.floor(Math.random()*3)}.${Math.floor(Math.random()*254+1)}</span></span>
     </div>
-    <span style="color:var(--fg-dim);font-size:12px;">Last login from <span style="color:var(--blue);">${ip}</span></span>
+    <span style="color:var(--fg-dim);font-size:12px;">Last login from <span class="motd-ip" style="color:var(--blue);">…</span></span>
     <hr style="border:0;border-bottom:1px solid var(--border);margin:10px 0 20px;">
   `;
   history.appendChild(motdDiv);
+  // Fill the address in whenever it arrives — or never. The animation carries
+  // on either way, which is what the original comment claimed but awaiting the
+  // promise here prevented: a slow lookup stalled the boot at this exact line.
+  ipPromise.then(ip => {
+    const slot = motdDiv.querySelector('.motd-ip');
+    if (slot) slot.textContent = ip;
+  }).catch(() => {});
   scrollToBottom();
 
   await new Promise(r => setTimeout(r, 300));
 
   // Arrived via a shared link like /#projects — go straight to what they came
   // for instead of making them sit through about + help first.
-  const linked = hashCommand();
+  const linked = linkedCommand() || hashCommand();
   if (linked) {
     await typeCommand(linked);
     await new Promise(r => setTimeout(r, 120));
+    commandHistory.push(linked);
+    saveHistory();
     processCommand(linked);
     addToHistory(
       `<div style="color:var(--fg-dim);font-size:12px;">` +
@@ -312,9 +329,20 @@ async function runIntro() {
     addToHistory(document.getElementById('tpl-help').innerHTML);
   }
 
+  // Shown once, to the people who would otherwise stare at a prompt and leave.
+  let toured = true;
+  try { toured = !!localStorage.getItem('portfolio-toured'); } catch { /* private mode */ }
+  if (!toured && !linked) {
+    addToHistory(
+      `<div class="tour-hint">First time here? ` +
+      `<span class="clickable-cmd" data-cmd="tour">tour</span> walks you through it in 40 seconds, ` +
+      `or press <b>Ctrl&nbsp;K</b> to search.</div>`);
+  }
+
   realPrompt.classList.remove('hidden');
   cmdInput.focus();
   isBooting = false;
+  document.getElementById('terminal-window')?.classList.remove('booting');
   scrollToBottom();
 }
 
@@ -329,7 +357,7 @@ const availableCommands = [
   'help','about','neofetch','whoami','experience','git log','projects','skills',
   'tree','certs','education','contact','email','status','deploy','ls','resume',
   'clear','m','uptime','ping','history','date','pwd','hostname','echo','cat readme','cat_readme',
-  'ask','vcard','split',
+  'ask','vcard','split','share','tour','tab',
   'linkedin','github','joke','quote','fortune','hack','coffee','theme','sudo','cd','grep','ls projects'
 ];
 // Offered by the ghost so a pipe is discoverable without reading the help.
@@ -339,8 +367,41 @@ const PIPE_EXAMPLES = [
   'skills | wc -l',
 ];
 
-const commandHistory = [];
+// A real shell remembers across sessions; this one forgot everything on
+// reload, which also made the palette's "Recent" group useless on a return
+// visit. Capped so the key cannot grow without bound.
+const HISTORY_KEY = 'portfolio-history';
+const HISTORY_CAP = 60;
+
+function loadHistory() {
+  try {
+    const v = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    return Array.isArray(v) ? v.filter(x => typeof x === 'string').slice(-HISTORY_CAP) : [];
+  } catch { return []; }   // private mode, or someone edited the key by hand
+}
+
+function saveHistory() {
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(commandHistory.slice(-HISTORY_CAP))); }
+  catch { /* private mode */ }
+}
+
+const commandHistory = loadHistory();
 let historyIndex = -1;
+
+// !! repeats the last command, !3 the third, !ca the most recent starting
+// with "ca" — expanded before the command runs, and echoed the way bash does.
+function expandBang(raw) {
+  if (!/^!/.test(raw)) return raw;
+  if (raw === '!!') return commandHistory[commandHistory.length - 1] || null;
+  const n = /^!(\d+)$/.exec(raw);
+  if (n) return commandHistory[+n[1] - 1] || null;
+  const pre = raw.slice(1);
+  if (!pre) return null;
+  for (let i = commandHistory.length - 1; i >= 0; i--) {
+    if (commandHistory[i].startsWith(pre)) return commandHistory[i];
+  }
+  return null;
+}
 const sessionStart = Date.now();
 
 // ─── GHOST AUTOCOMPLETE ───────────────────────────────────────────────────────
@@ -429,9 +490,23 @@ cmdInput.addEventListener('keydown', function(e) {
   if (e.key === 'Enter') {
     // collapse repeated spaces — a real shell does not care how many you
     // typed, and split(' ')[1] used to return empty on a double space
-    const cmd = this.value.trim().toLowerCase().replace(/\s+/g, ' ');
+    let cmd = this.value.trim().toLowerCase().replace(/\s+/g, ' ');
     this.value = ''; renderInput(''); updateGhost();
-    if (cmd) commandHistory.push(cmd);
+
+    if (/^!/.test(cmd)) {
+      const expanded = expandBang(cmd);
+      if (!expanded) {
+        addCommandToHistory(cmd);
+        addToHistory(`<div style="color:var(--red);">${escapeHTML(cmd)}: event not found</div>` +
+          `<div style="color:var(--fg-dim);font-size:12px;margin-top:4px;">// ` +
+          `<span class="clickable-cmd" data-cmd="history">history</span> lists what you have run</div>`);
+        scrollToBottom();
+        return;
+      }
+      cmd = expanded;
+    }
+
+    if (cmd) { commandHistory.push(cmd); saveHistory(); }
     historyIndex = -1;
     addCommandToHistory(cmd);
     if (cmd) trackCommand(cmd, 'typed');
@@ -1450,6 +1525,100 @@ function renderInput(value) {
   inputDisplay.innerHTML = sxHighlight(value);
 }
 
+// ─── TOUR ─────────────────────────────────────────────────────────────────────
+// A terminal asks you to know what to type. Most visitors do not, and leave.
+// `tour` drives a short curated sequence itself, captioned, and stoppable at
+// any point — runCommandClick does not push to commandHistory, so a tour does
+// not flood the saved history.
+const TOUR = [
+  { cmd: 'whoami',                  note: 'Who he is, in one card.' },
+  { cmd: 'experience',              note: 'Two roles, most recent first.' },
+  { cmd: 'skills',                  note: 'The whole stack, grouped.' },
+  { cmd: 'cat projects/aws-sso.md', note: 'One case study, in full.' },
+  { cmd: 'status',                  note: 'Availability and response time.' },
+];
+
+let tourRunning = false;
+const tourStop = () => { tourRunning = false; };
+
+async function runTour() {
+  if (tourRunning || isBooting) return;
+  tourRunning = true;
+  try { localStorage.setItem('portfolio-toured', '1'); } catch { /* private mode */ }
+
+  addToHistory(
+    `<div class="tour-banner"><span class="tour-dot"></span>` +
+    `<span>Guided tour — ${TOUR.length} stops, about 40 seconds.</span>` +
+    `<button type="button" class="tour-skip">skip</button></div>`);
+
+  for (let i = 0; i < TOUR.length; i++) {
+    if (!tourRunning) break;
+    const step = TOUR[i];
+    addToHistory(`<div class="tour-step"><span class="tour-num">${i + 1}/${TOUR.length}</span>` +
+                 `${escapeHTML(step.note)}</div>`);
+    await runCommandClick(step.cmd, 'tour');
+    if (!tourRunning) break;
+    await new Promise(r => setTimeout(r, prefersReducedMotion() ? 500 : 1700));
+  }
+
+  const finished = tourRunning;
+  tourRunning = false;
+  addToHistory(
+    `<div style="color:var(--${finished ? 'green' : 'fg-dim'});">` +
+    `${finished ? 'That is the tour.' : 'Tour stopped.'}</div>` +
+    `<div style="color:var(--fg-dim);font-size:12px;margin-top:6px;">// from here: ` +
+    `<span class="clickable-cmd" data-cmd="help">help</span> for everything, ` +
+    `<span class="clickable-cmd" data-cmd="ask is he available for work?">ask a question</span>, or ` +
+    `<span class="clickable-cmd" data-cmd="contact">contact</span></div>`);
+  cmdInput?.focus();
+}
+
+document.addEventListener('click', e => {
+  if (e.target.closest('.tour-skip')) { e.stopPropagation(); tourStop(); }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && tourRunning) tourStop();
+});
+
+// ─── SHARE ────────────────────────────────────────────────────────────────────
+// /?run=<command> opens running that command. #section hashes could already
+// link a section; this links an answer, so a link can be aimed at whatever is
+// relevant to the person receiving it.
+const RUN_PARAM = 'run';
+const RUN_MAX   = 120;
+
+function linkedCommand() {
+  try {
+    const raw = new URLSearchParams(location.search).get(RUN_PARAM);
+    if (!raw) return null;
+    const cmd = raw.trim().toLowerCase().replace(/\s+/g, ' ').slice(0, RUN_MAX);
+    return cmd || null;
+  } catch { return null; }
+}
+
+function shareLink(cmd) {
+  return `${location.origin}${location.pathname}?${RUN_PARAM}=${encodeURIComponent(cmd)}`;
+}
+
+async function runShare(arg) {
+  const explicit = arg.trim();
+  const cmd = explicit || commandHistory[commandHistory.length - 1] || '';
+  if (!cmd) {
+    addToHistory(`<div style="color:var(--red);">share: nothing to share yet</div>` +
+      `<div style="color:var(--fg-dim);font-size:12px;margin-top:4px;">// run something first, ` +
+      `or name it: <span class="clickable-cmd" data-cmd="share skills">share skills</span></div>`);
+    return;
+  }
+  const url = shareLink(cmd);
+  const ok  = await copyValue(url);
+  addToHistory(
+    `<div style="color:${ok ? 'var(--green)' : 'var(--yellow)'};">` +
+    `${ok ? 'Copied' : 'Link for'} <b>${escapeHTML(cmd)}</b></div>` +
+    `<div class="share-url">${escapeHTML(url)}</div>` +
+    `<div style="color:var(--fg-dim);font-size:12px;margin-top:8px;">` +
+    `// opening it runs that command instead of the usual intro</div>`);
+}
+
 // ─── SPLIT ────────────────────────────────────────────────────────────────────
 // `split skills experience` — two sections side by side with a draggable
 // divider, the way you would actually read them when comparing.
@@ -1949,7 +2118,13 @@ function processCommand(cmd) {
     case '': break;
     default: {
       const safeCmd = escapeHTML(cmd);
-      if (cmd === 'split' || cmd.startsWith('split ')) {
+      if (cmd === 'tab' || cmd.startsWith('tab ')) {
+        runTab(cmd.slice(3));
+      } else if (cmd === 'tour') {
+        runTour();
+      } else if (cmd === 'share' || cmd.startsWith('share ')) {
+        runShare(cmd.slice(5));
+      } else if (cmd === 'split' || cmd.startsWith('split ')) {
         runSplit(cmd.slice(5));
       } else if (cmd === 'vcard' || cmd === 'vcf' || cmd === 'contact --save') {
         runVCard();
@@ -2061,6 +2236,16 @@ async function runCommandClick(cmd, source = 'link') {
   await typeText(div.querySelector('.cmd'), cmd);
   await new Promise(r => setTimeout(r, 150));
   div.remove();
+  // A clicked command ran, so it belongs in history exactly like a typed one.
+  // Without this, `history`, `!!`, the up-arrow and the palette's Recent group
+  // are all empty for anyone who navigates by clicking — which is most people.
+  // The tour is the one exception: five entries per run would bury whatever
+  // the visitor actually did themselves.
+  if (cmd && source !== 'tour') {
+    commandHistory.push(cmd);
+    saveHistory();
+    historyIndex = -1;
+  }
   addCommandToHistory(cmd);
   processCommand(cmd);
   scrollToBottom();
@@ -2769,3 +2954,108 @@ if (chatFab && chatPanel) {
   window.paletteClose = close;
   window.paletteIsOpen = isOpen;
 })();
+
+// ─── TABS ─────────────────────────────────────────────────────────────────────
+// Each tab owns its scrollback; saved command history stays shared, the way a
+// shell's histfile is shared between sessions. Ctrl+T and Ctrl+W are the
+// browser's own — binding them would close someone's real tab — so switching is
+// Alt+number, and creating is the + button or the `tab` command.
+const tabBar = document.getElementById('tab-bar');
+let tabs = [{ html: '' }];
+let activeTab = 0;
+
+// Derived from position, not a counter. A monotonic sequence meant closing the
+// second session and opening another gave you "sh-3", and worse, the label was
+// a different number from the one Alt+N and `tab <n>` use. The label is now
+// always the index you switch to.
+const tabTitle = i => (i === 0 ? 'main' : `sh-${i + 1}`);
+
+function renderTabs() {
+  if (!tabBar) return;
+  tabBar.innerHTML = tabs.map((t, i) =>
+    `<button type="button" class="tab" role="tab" data-tab="${i}" ` +
+    `aria-selected="${i === activeTab}" ` +
+    `aria-label="Session ${tabTitle(i)}${i === activeTab ? ', current' : ''}">` +
+    `<span>${tabTitle(i)}</span>` +
+    (tabs.length > 1
+      ? `<span class="tab-x" data-close="${i}" role="button" aria-label="Close ${tabTitle(i)}">×</span>`
+      : '') +
+    `</button>`
+  ).join('') +
+  `<button type="button" id="tab-new" aria-label="New session">+</button>`;
+}
+
+function switchTab(i) {
+  if (isBooting) return;
+  if (i === activeTab || i < 0 || i >= tabs.length) return;
+  tabs[activeTab].html = history.innerHTML;
+  activeTab = i;
+  history.innerHTML = tabs[activeTab].html;
+  renderTabs();
+  scrollToBottom();
+  if (!isBooting) cmdInput?.focus();
+}
+
+function newTab() {
+  if (isBooting) return;
+  tabs[activeTab].html = history.innerHTML;
+  tabs.push({ html: '' });
+  activeTab = tabs.length - 1;
+  history.innerHTML = '';
+  renderTabs();
+  addToHistory(
+    `<div style="color:var(--fg-dim);font-size:12.5px;">New session. Same history, fresh scrollback.</div>` +
+    `<div style="color:var(--fg-dim);font-size:12px;margin-top:5px;">// ` +
+    `<span class="clickable-cmd" data-cmd="help">help</span>, ` +
+    `<span class="clickable-cmd" data-cmd="split skills experience">split</span>, or Alt+1 to go back</div>`);
+  if (!isBooting) cmdInput?.focus();
+}
+
+function closeTab(i) {
+  if (isBooting) return;
+  if (tabs.length === 1) { history.innerHTML = ''; tabs[0].html = ''; return; }
+  if (i === activeTab) tabs[activeTab].html = history.innerHTML;
+  tabs.splice(i, 1);
+  if (activeTab > i) activeTab -= 1;
+  else if (activeTab === i) activeTab = Math.min(activeTab, tabs.length - 1);
+  history.innerHTML = tabs[activeTab].html;
+  renderTabs();
+  scrollToBottom();
+  if (!isBooting) cmdInput?.focus();
+}
+
+function runTab(arg) {
+  const a = arg.trim();
+  if (!a || a === 'new') { newTab(); return; }
+  if (a === 'close') { closeTab(activeTab); return; }
+  if (a === 'list') {
+    addToHistory(tabs.map((t, i) =>
+      `<div style="color:var(--fg);">${i === activeTab ? '*' : ' '} ` +
+      `<span class="clickable-cmd" data-cmd="tab ${i + 1}">${i + 1}</span>  ${tabTitle(i)}</div>`
+    ).join('') + `<div style="color:var(--fg-dim);font-size:12px;margin-top:8px;">// ` +
+      `<span class="clickable-cmd" data-cmd="tab new">tab new</span>, ` +
+      `<span class="clickable-cmd" data-cmd="tab close">tab close</span>, or Alt+1…9</div>`);
+    return;
+  }
+  const n = parseInt(a, 10);
+  if (n >= 1 && n <= tabs.length) { switchTab(n - 1); return; }
+  addToHistory(`<div style="color:var(--red);">tab: ${escapeHTML(a)}: no such session</div>` +
+    `<div style="color:var(--fg-dim);font-size:12px;margin-top:4px;">// ` +
+    `<span class="clickable-cmd" data-cmd="tab list">tab list</span> shows them</div>`);
+}
+
+if (tabBar) {
+  renderTabs();
+  tabBar.addEventListener('click', e => {
+    const x = e.target.closest('[data-close]');
+    if (x) { e.stopPropagation(); closeTab(+x.dataset.close); return; }
+    if (e.target.closest('#tab-new')) { newTab(); return; }
+    const t = e.target.closest('[data-tab]');
+    if (t) switchTab(+t.dataset.tab);
+  });
+  document.addEventListener('keydown', e => {
+    if (!e.altKey || e.ctrlKey || e.metaKey) return;
+    const n = parseInt(e.key, 10);
+    if (n >= 1 && n <= 9 && n <= tabs.length) { e.preventDefault(); switchTab(n - 1); }
+  });
+}
