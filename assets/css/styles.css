@@ -1354,4 +1354,4 @@ body.split-dragging, body.split-dragging * { user-select: none; cursor: col-resi
 
 /* The boot sequence types into #history for a few seconds; swapping sessions
    mid-flight would cut it in half, so the bar is inert until it finishes. */
-#terminal-window.booting #tab-bar { opacity: .35; pointer-events: none; }
+#terminal-window.booting #tab-bar { pointer-events: none; }
