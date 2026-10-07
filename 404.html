@@ -21,6 +21,12 @@
     })();
   </script>
   <style>
+    /* styles.css hides the native cursor because the main page draws its own
+       with #cursor-dot / #cursor-outline and script.js. This page has neither,
+       so without this there is no pointer at all except over a link. */
+    body, #terminal-window, #terminal { cursor: auto; }
+    .nf-links a, .tb-dot { cursor: pointer; }
+
     /* this page has no scrollback, so the window sizes to its content */
     #terminal-window { height: auto; max-height: 92vh; }
     #terminal { padding: 26px 28px 30px; }
